@@ -2,21 +2,15 @@ import streamlit as st
 from datetime import datetime
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
-import hashlib
 import random
 
 # ── CONFIG ─────────────────────────────────────────
 st.set_page_config(page_title="Fitmat Coaching Classes", layout="wide")
 
-# ── PASSWORD HASHING ───────────────────────────────
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
-
-# ── USERS ──────────────────────────────────────────
+# ── USERS (NO HASH → SIMPLE & WORKING) ─────────────
 USERS = {
-    "admin": {"password": hash_password("admin123"), "role": "Admin", "name": "Admin"},
-    "student1": {"password": hash_password("1234"), "role": "Student", "name": "Rahul"},
+    "admin": {"password": "admin123", "role": "Admin", "name": "Admin"},
+    "student1": {"password": "1234", "role": "Student", "name": "Rahul"},
 }
 
 # ── SESSION STATE ──────────────────────────────────
@@ -34,13 +28,18 @@ def login():
     user = st.text_input("Username")
     pwd = st.text_input("Password", type="password")
 
-    if st.button("Login"):
-        if user in USERS and USERS[user]["password"] == hash_password(pwd):
+    if st.button("Sign In →"):
+        if user in USERS and USERS[user]["password"] == pwd:
             st.session_state.logged_in = True
             st.session_state.user = USERS[user]
             st.rerun()
         else:
-            st.error("Invalid credentials")
+            st.error("❌ Invalid username or password")
+
+    # 👉 Show demo credentials
+    with st.expander("ℹ️ Demo Login Credentials"):
+        st.write("Admin → username: admin | password: admin123")
+        st.write("Student → username: student1 | password: 1234")
 
 # ── DATA ───────────────────────────────────────────
 def get_notes():
