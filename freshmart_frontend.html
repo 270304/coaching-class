@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FreshMart Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#f5f2ee;--sidebar:#1c1917;--card:#fff;--border:#e5e0d8;
+  --text:#1c1917;--muted:#78716c;--accent:#16a34a;--accent2:#ea580c;
+  --danger:#dc2626;--warn:#d97706;--info:#2563eb;
+  --font-body:'Outfit',sans-serif;--font-serif:'Instrument Serif',serif;
+}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden;font-size:14px}
+.sidebar{width:220px;min-width:220px;background:var(--sidebar);display:flex;flex-direction:column}
+.sidebar-logo{padding:24px 20px 20px;border-bottom:1px solid rgba(255,255,255,0.08)}
+.sidebar-logo h1{font-family:var(--font-serif);font-size:22px;color:#fff;font-weight:400;line-height:1.2}
+.sidebar-logo p{font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;letter-spacing:.5px;text-transform:uppercase}
+.sidebar-user{padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px}
+.avatar{width:32px;height:32px;border-radius:50%;background:#16a34a;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff;flex-shrink:0}
+.sidebar-user-info p{font-size:13px;color:#fff;font-weight:500}
+.sidebar-user-info span{font-size:11px;color:rgba(255,255,255,0.4)}
+nav{padding:12px 0;flex:1}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;color:rgba(255,255,255,0.55);font-size:13px;font-weight:500;transition:all .15s;border-left:3px solid transparent;user-select:none}
+.nav-item:hover{color:#fff;background:rgba(255,255,255,0.05)}
+.nav-item.active{color:#fff;background:rgba(255,255,255,0.08);border-left-color:#16a34a}
+.nav-icon{font-size:15px;width:18px;text-align:center}
+.sidebar-bottom{padding:16px 20px;border-top:1px solid rgba(255,255,255,0.08)}
+.logout-btn{width:100%;padding:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:rgba(255,255,255,0.6);font-size:12px;cursor:pointer;font-family:var(--font-body);transition:all .15s}
+.logout-btn:hover{background:rgba(255,255,255,0.1);color:#fff}
+
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column;min-width:0}
+.topbar{padding:20px 28px 0;display:flex;align-items:flex-start;justify-content:space-between}
+.page-title{font-family:var(--font-serif);font-size:28px;font-weight:400;color:var(--text)}
+.page-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.date-badge{font-size:12px;color:var(--muted);background:var(--card);border:1px solid var(--border);padding:6px 12px;border-radius:20px;white-space:nowrap;margin-top:4px}
+.content{padding:20px 28px 28px;flex:1}
+
+.metrics-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px}
+.metric-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px}
+.metric-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.metric-value{font-family:var(--font-serif);font-size:28px;color:var(--text);line-height:1}
+.metric-sub{font-size:11px;color:var(--muted);margin-top:4px}
+.metric-card.accent{background:#16a34a;border-color:#16a34a}
+.metric-card.accent .metric-label,.metric-card.accent .metric-sub{color:rgba(255,255,255,0.7)}
+.metric-card.accent .metric-value{color:#fff}
+
+.two-col{display:grid;grid-template-columns:1.5fr 1fr;gap:18px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px}
+.card-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:16px}
+
+.chart-container{height:130px;display:flex;align-items:flex-end;gap:5px}
+.bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%}
+.bar{width:100%;background:#dcfce7;border-radius:4px 4px 0 0;position:relative;overflow:hidden;cursor:pointer;transition:all .2s}
+.bar:hover{background:#bbf7d0}
+.bar-fill{position:absolute;bottom:0;left:0;right:0;background:#16a34a;border-radius:4px 4px 0 0;transition:height .7s cubic-bezier(.34,1.2,.64,1)}
+.chart-labels{display:flex;gap:5px;margin-top:8px}
+.chart-label{flex:1;text-align:center;font-size:10px;color:var(--muted)}
+
+.alert-list{display:flex;flex-direction:column;gap:8px}
+.alert-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;font-size:12px}
+.alert-item.danger{background:#fef2f2;border:1px solid #fecaca}
+.alert-item.warn{background:#fffbeb;border:1px solid #fde68a}
+.alert-item.info{background:#eff6ff;border:1px solid #bfdbfe}
+.alert-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.alert-dot.danger{background:var(--danger)}.alert-dot.warn{background:var(--warn)}.alert-dot.info{background:var(--info)}
+.alert-name{flex:1;font-weight:500;color:var(--text)}
+.alert-tag{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500}
+.alert-tag.danger{background:#fee2e2;color:#991b1b}
+.alert-tag.warn{background:#fef3c7;color:#92400e}
+.alert-tag.info{background:#dbeafe;color:#1e40af}
+
+.recent-table{width:100%;border-collapse:collapse;font-size:12px}
+.recent-table th{text-align:left;color:var(--muted);font-weight:500;padding:6px 10px;text-transform:uppercase;font-size:10px;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+.recent-table td{padding:9px 10px;border-bottom:1px solid #f5f2ee;color:var(--text)}
+.recent-table tr:last-child td{border-bottom:none}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.badge.success{background:#dcfce7;color:#166534}
+.badge.pending{background:#fef3c7;color:#92400e}
+.badge.danger{background:#fee2e2;color:#991b1b}
+.badge.info{background:#dbeafe;color:#1e40af}
+
+/* BILLING */
+.billing-layout{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;align-items:start}
+.search-input{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--font-body);font-size:13px;background:#faf9f7;color:var(--text);outline:none;transition:border .15s}
+.search-input:focus{border-color:#16a34a;background:#fff}
+.add-btn{padding:9px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-family:var(--font-body);font-size:13px;font-weight:500;cursor:pointer;transition:background .15s;white-space:nowrap}
+.add-btn:hover{background:#15803d}
+.product-list{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;margin-top:10px}
+.product-list::-webkit-scrollbar{width:4px}.product-list::-webkit-scrollbar-track{background:#f5f2ee}.product-list::-webkit-scrollbar-thumb{background:#d6d3d1;border-radius:4px}
+.product-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#faf9f7;border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s}
+.product-row:hover{border-color:#16a34a;background:#f0fdf4}
+.product-row-name{font-size:13px;font-weight:500}
+.product-row-cat{font-size:11px;color:var(--muted)}
+.product-row-price{font-size:13px;font-weight:600;color:#16a34a;white-space:nowrap}
+
+.cart-section{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;margin-bottom:10px}
+.cart-section::-webkit-scrollbar{width:4px}.cart-section::-webkit-scrollbar-thumb{background:#d6d3d1;border-radius:4px}
+.cart-item{display:flex;align-items:center;gap:8px;padding:9px 12px;background:#faf9f7;border:1px solid var(--border);border-radius:10px}
+.cart-item-name{flex:1;font-size:13px;font-weight:500}
+.qty-ctrl{display:flex;align-items:center;gap:5px}
+.qty-btn{width:24px;height:24px;border-radius:6px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s;line-height:1}
+.qty-btn:hover{background:var(--text);color:#fff;border-color:var(--text)}
+.qty-num{font-size:13px;font-weight:600;min-width:20px;text-align:center}
+.cart-item-sub{font-size:13px;font-weight:600;min-width:55px;text-align:right;color:#16a34a}
+.del-btn{width:24px;height:24px;border-radius:6px;border:1px solid #fecaca;background:#fef2f2;cursor:pointer;color:#dc2626;font-size:11px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.del-btn:hover{background:#dc2626;color:#fff}
+.empty-cart{text-align:center;padding:24px;color:var(--muted);font-size:13px}
+
+.bill-summary{background:var(--sidebar);border-radius:12px;padding:16px;margin-top:8px}
+.bill-row{display:flex;justify-content:space-between;font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:6px}
+.bill-total{display:flex;justify-content:space-between;font-size:18px;color:#fff;font-weight:600;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.15)}
+.generate-btn{width:100%;margin-top:12px;padding:12px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-family:var(--font-serif);font-size:17px;cursor:pointer;transition:all .15s;letter-spacing:.2px}
+.generate-btn:hover{background:#15803d;transform:translateY(-1px)}
+
+/* INVENTORY */
+.pill-row{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.pill{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--muted);transition:all .15s;user-select:none}
+.pill.active{background:var(--text);color:#fff;border-color:var(--text)}
+.inventory-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.inv-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px}
+.inv-item-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;gap:8px}
+.inv-name{font-size:13px;font-weight:500;color:var(--text)}
+.inv-cat{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+.stock-bar{height:4px;background:#e5e0d8;border-radius:4px;overflow:hidden;margin-top:8px}
+.stock-fill{height:100%;border-radius:4px;transition:width .6s}
+.stock-fill.ok{background:#16a34a}.stock-fill.low{background:#d97706}.stock-fill.out{background:#dc2626}
+.inv-footer{display:flex;justify-content:space-between;margin-top:7px;font-size:11px;color:var(--muted)}
+
+/* ATTENDANCE */
+.attendance-grid{display:flex;flex-direction:column;gap:10px}
+.emp-row{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:14px}
+.emp-info{flex:1}
+.emp-name{font-size:14px;font-weight:500}
+.emp-role{font-size:11px;color:var(--muted);margin-top:2px}
+.att-btns{display:flex;gap:7px}
+.att-btn{padding:6px 12px;border-radius:8px;border:1px solid var(--border);font-size:12px;font-weight:500;cursor:pointer;font-family:var(--font-body);transition:all .15s;background:#fff;color:var(--muted)}
+.att-btn.present.sel,.att-btn.present:hover{background:#dcfce7;border-color:#86efac;color:#166534}
+.att-btn.absent.sel,.att-btn.absent:hover{background:#fee2e2;border-color:#fca5a5;color:#991b1b}
+.att-btn.leave.sel,.att-btn.leave:hover{background:#fef3c7;border-color:#fcd34d;color:#92400e}
+
+/* ANALYTICS */
+.analytics-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.bar-h-wrap{margin-bottom:12px}
+.bar-h-label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}
+.bar-h-track{height:6px;background:#e5e0d8;border-radius:4px;overflow:hidden}
+.bar-h-fill{height:100%;background:#16a34a;border-radius:4px;transition:width .7s cubic-bezier(.34,1.2,.64,1)}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:6px}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.donut-wrap{position:relative;width:120px;height:120px;margin:0 auto 14px}
+.donut-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+.donut-label b{font-family:var(--font-serif);font-size:20px;display:block;line-height:1.1}
+.donut-label small{font-size:10px;color:var(--muted)}
+
+/* PAGES */
+.page{display:none}.page.active{display:block}
+
+/* RECEIPT MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:16px;padding:28px;max-width:380px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.2)}
+.receipt{font-family:monospace;font-size:12px;line-height:1.6;background:#faf9f7;border:1px dashed #ccc;border-radius:10px;padding:16px;margin:16px 0;white-space:pre}
+.modal-close{width:100%;padding:10px;background:var(--text);color:#fff;border:none;border-radius:10px;font-family:var(--font-body);font-size:14px;cursor:pointer;font-weight:500}
+.section-divider{height:1px;background:var(--border);margin:12px 0}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <h1>FreshMart</h1>
+    <p>Store Manager</p>
+  </div>
+  <div class="sidebar-user">
+    <div class="avatar">OW</div>
+    <div class="sidebar-user-info">
+      <p>Owner</p>
+      <span>Administrator</span>
+    </div>
+  </div>
+  <nav>
+    <div class="nav-item active" onclick="showPage('dashboard',this)"><span class="nav-icon">◈</span> Dashboard</div>
+    <div class="nav-item" onclick="showPage('billing',this)"><span class="nav-icon">⊞</span> Billing</div>
+    <div class="nav-item" onclick="showPage('inventory',this)"><span class="nav-icon">▦</span> Inventory</div>
+    <div class="nav-item" onclick="showPage('attendance',this)"><span class="nav-icon">◎</span> Employees</div>
+    <div class="nav-item" onclick="showPage('analytics',this)"><span class="nav-icon">◑</span> Analytics</div>
+  </nav>
+  <div class="sidebar-bottom">
+    <button class="logout-btn">Sign out</button>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- DASHBOARD -->
+<div id="page-dashboard" class="page active">
+  <div class="topbar">
+    <div><div class="page-title">Good morning ☀️</div><div class="page-sub">Here's what's happening at FreshMart today</div></div>
+    <div class="date-badge" id="today-date"></div>
+  </div>
+  <div class="content">
+    <div class="metrics-grid">
+      <div class="metric-card accent">
+        <div class="metric-label">Today's Revenue</div>
+        <div class="metric-value">₹4,280</div>
+        <div class="metric-sub">↑ 12% vs yesterday</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Bills Today</div>
+        <div class="metric-value">23</div>
+        <div class="metric-sub">Avg ₹186/bill</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Products</div>
+        <div class="metric-value">10</div>
+        <div class="metric-sub">In catalog</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Low Stock</div>
+        <div class="metric-value" style="color:var(--warn)">3</div>
+        <div class="metric-sub">Need reorder</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Out of Stock</div>
+        <div class="metric-value" style="color:var(--danger)">1</div>
+        <div class="metric-sub">Unavailable now</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">📈 Revenue — Last 14 Days</div>
+        <div class="chart-container" id="revenue-chart"></div>
+        <div class="chart-labels" id="chart-labels"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🚨 Stock Alerts</div>
+        <div class="alert-list">
+          <div class="alert-item danger"><div class="alert-dot danger"></div><div class="alert-name">Maggi Noodles</div><span class="alert-tag danger">Out of Stock</span></div>
+          <div class="alert-item warn"><div class="alert-dot warn"></div><div class="alert-name">Colgate Toothpaste</div><span class="alert-tag warn">5 units left</span></div>
+          <div class="alert-item warn"><div class="alert-dot warn"></div><div class="alert-name">Surf Excel 1kg</div><span class="alert-tag warn">3 units left</span></div>
+          <div class="alert-item info"><div class="alert-dot info"></div><div class="alert-name">Amul Milk 1L</div><span class="alert-tag info">Expires Jun 15</span></div>
+          <div class="alert-item info"><div class="alert-dot info"></div><div class="alert-name">Kissan Jam</div><span class="alert-tag info">Expires Aug 15</span></div>
+          <div class="alert-item info"><div class="alert-dot info"></div><div class="alert-name">Coca Cola 2L</div><span class="alert-tag info">Expires Jul 01</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:18px">
+      <div class="card">
+        <div class="card-title">🧾 Recent Bills</div>
+        <table class="recent-table">
+          <thead><tr><th>Bill No.</th><th>Customer</th><th>Items</th><th>Total</th><th>Time</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>BILL0089</td><td>Rahul Sharma</td><td>4</td><td>₹486</td><td>11:42 AM</td><td><span class="badge success">Paid</span></td></tr>
+            <tr><td>BILL0088</td><td>Walk-in</td><td>2</td><td>₹134</td><td>11:15 AM</td><td><span class="badge success">Paid</span></td></tr>
+            <tr><td>BILL0087</td><td>Priya Patel</td><td>6</td><td>₹920</td><td>10:58 AM</td><td><span class="badge success">Paid</span></td></tr>
+            <tr><td>BILL0086</td><td>Amit Singh</td><td>3</td><td>₹312</td><td>10:30 AM</td><td><span class="badge success">Paid</span></td></tr>
+            <tr><td>BILL0085</td><td>Neha Gupta</td><td>5</td><td>₹668</td><td>10:02 AM</td><td><span class="badge success">Paid</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BILLING -->
+<div id="page-billing" class="page">
+  <div class="topbar">
+    <div><div class="page-title">Billing</div><div class="page-sub">Create a new bill for customer</div></div>
+    <div class="date-badge">Bill #BILL0090</div>
+  </div>
+  <div class="content">
+    <div class="billing-layout">
+      <div class="card">
+        <div class="card-title">Add Products</div>
+        <input class="search-input" id="prod-search" placeholder="Search by name or barcode..." oninput="filterProducts(this.value)">
+        <div class="product-list" id="product-list"></div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card">
+          <div class="card-title">Customer Details</div>
+          <input class="search-input" placeholder="Customer name (optional)" style="margin-bottom:8px" id="cust-name">
+          <input class="search-input" placeholder="Customer phone (optional)" id="cust-phone">
+        </div>
+
+        <div class="card" style="flex:1;display:flex;flex-direction:column">
+          <div class="card-title">🛒 Cart</div>
+          <div class="cart-section" id="cart-list"></div>
+          <div class="empty-cart" id="cart-empty">
+            <div style="font-size:28px;margin-bottom:8px">🛒</div>
+            <div>Cart is empty</div>
+            <div style="font-size:11px;margin-top:4px">Click a product to add it</div>
+          </div>
+          <div class="section-divider"></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <label style="font-size:12px;color:var(--muted);white-space:nowrap">Discount (₹)</label>
+            <input class="search-input" type="number" id="discount" value="0" min="0" style="width:90px;text-align:right;flex-shrink:0" oninput="updateSummary()">
+          </div>
+          <div class="bill-summary">
+            <div class="bill-row"><span>Subtotal</span><span id="subtotal">₹0.00</span></div>
+            <div class="bill-row"><span>Discount</span><span id="disc-display">₹0.00</span></div>
+            <div class="bill-total"><span>Total</span><span id="total-display">₹0.00</span></div>
+            <button class="generate-btn" onclick="generateBill()">Generate Bill →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- INVENTORY -->
+<div id="page-inventory" class="page">
+  <div class="topbar">
+    <div><div class="page-title">Inventory</div><div class="page-sub">10 products in catalog</div></div>
+    <button class="add-btn">+ Add Product</button>
+  </div>
+  <div class="content">
+    <div class="pill-row">
+      <div class="pill active" onclick="filterInv('all',this)">All Products</div>
+      <div class="pill" onclick="filterInv('low',this)">⚠️ Low Stock</div>
+      <div class="pill" onclick="filterInv('out',this)">🔴 Out of Stock</div>
+      <div class="pill" onclick="filterInv('expiry',this)">📅 Expiring Soon</div>
+    </div>
+    <div class="inventory-grid" id="inv-grid"></div>
+  </div>
+</div>
+
+<!-- ATTENDANCE -->
+<div id="page-attendance" class="page">
+  <div class="topbar">
+    <div><div class="page-title">Employees</div><div class="page-sub">Mark today's attendance</div></div>
+    <button class="add-btn">+ Add Employee</button>
+  </div>
+  <div class="content">
+    <div class="two-col" style="margin-bottom:18px">
+      <div class="card">
+        <div class="card-title">Today's Summary</div>
+        <div style="display:flex;gap:16px;text-align:center">
+          <div style="flex:1"><div style="font-family:var(--font-serif);font-size:36px;color:#16a34a" id="present-count">3</div><div style="font-size:11px;color:var(--muted)">Present</div></div>
+          <div style="flex:1"><div style="font-family:var(--font-serif);font-size:36px;color:var(--danger)" id="absent-count">1</div><div style="font-size:11px;color:var(--muted)">Absent</div></div>
+          <div style="flex:1"><div style="font-family:var(--font-serif);font-size:36px;color:var(--warn)" id="leave-count">1</div><div style="font-size:11px;color:var(--muted)">On Leave</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">This Month</div>
+        <div style="display:flex;gap:16px;text-align:center">
+          <div style="flex:1"><div style="font-family:var(--font-serif);font-size:36px;color:#16a34a">87%</div><div style="font-size:11px;color:var(--muted)">Avg Attendance</div></div>
+          <div style="flex:1"><div style="font-family:var(--font-serif);font-size:36px">5</div><div style="font-size:11px;color:var(--muted)">Total Staff</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Mark Attendance — <span id="att-date"></span></div>
+      <div class="attendance-grid" id="att-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ANALYTICS -->
+<div id="page-analytics" class="page">
+  <div class="topbar">
+    <div><div class="page-title">Analytics</div><div class="page-sub">Sales insights and customer trends</div></div>
+    <select class="search-input" style="width:160px;margin-top:4px;cursor:pointer">
+      <option>Last 7 days</option><option selected>Last 30 days</option><option>Last 90 days</option>
+    </select>
+  </div>
+  <div class="content">
+    <div class="metrics-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
+      <div class="metric-card"><div class="metric-label">Total Revenue</div><div class="metric-value">₹1.2L</div><div class="metric-sub">This month</div></div>
+      <div class="metric-card"><div class="metric-label">Total Bills</div><div class="metric-value">486</div><div class="metric-sub">This month</div></div>
+      <div class="metric-card"><div class="metric-label">Avg Bill Value</div><div class="metric-value">₹247</div><div class="metric-sub">Per transaction</div></div>
+      <div class="metric-card"><div class="metric-label">Top Customer</div><div class="metric-value" style="font-size:18px;padding-top:6px">Rahul S.</div><div class="metric-sub">₹8,420 total spent</div></div>
+    </div>
+    <div class="analytics-grid">
+      <div class="card">
+        <div class="card-title">🏆 Top Products by Revenue</div>
+        <div id="top-products"></div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="card-title" style="text-align:left">📦 Sales by Category</div>
+        <div class="donut-wrap">
+          <svg width="120" height="120" viewBox="0 0 120 120" style="transform:rotate(-90deg)">
+            <circle cx="60" cy="60" r="45" fill="none" stroke="#e5e0d8" stroke-width="16"/>
+            <circle cx="60" cy="60" r="45" fill="none" stroke="#16a34a" stroke-width="16" stroke-dasharray="113 170"/>
+            <circle cx="60" cy="60" r="45" fill="none" stroke="#ea580c" stroke-width="16" stroke-dasharray="57 226" stroke-dashoffset="-113"/>
+            <circle cx="60" cy="60" r="45" fill="none" stroke="#2563eb" stroke-width="16" stroke-dasharray="34 249" stroke-dashoffset="-170"/>
+            <circle cx="60" cy="60" r="45" fill="none" stroke="#d97706" stroke-width="16" stroke-dasharray="26 257" stroke-dashoffset="-204"/>
+          </svg>
+          <div class="donut-label"><b>₹1.2L</b><small>Revenue</small></div>
+        </div>
+        <div style="text-align:left">
+          <div class="legend-item"><div class="legend-dot" style="background:#16a34a"></div><span style="flex:1;font-size:12px">Staples</span><span style="font-size:12px;font-weight:500">40%</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:#ea580c"></div><span style="flex:1;font-size:12px">Snacks</span><span style="font-size:12px;font-weight:500">20%</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:#2563eb"></div><span style="flex:1;font-size:12px">Beverages</span><span style="font-size:12px;font-weight:500">12%</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:#d97706"></div><span style="flex:1;font-size:12px">Others</span><span style="font-size:12px;font-weight:500">28%</span></div>
+        </div>
+      </div>
+      <div class="card" style="grid-column:1/-1">
+        <div class="card-title">👤 Top Customers</div>
+        <table class="recent-table">
+          <thead><tr><th>Customer</th><th>Phone</th><th>Visits</th><th>Total Spent</th><th>Avg Bill</th><th>Last Visit</th></tr></thead>
+          <tbody>
+            <tr><td><b>Rahul Sharma</b></td><td>9876543210</td><td>34</td><td>₹8,420</td><td>₹248</td><td>Today</td></tr>
+            <tr><td><b>Priya Patel</b></td><td>9123456789</td><td>28</td><td>₹6,890</td><td>₹246</td><td>Yesterday</td></tr>
+            <tr><td><b>Neha Gupta</b></td><td>9001122334</td><td>22</td><td>₹5,120</td><td>₹233</td><td>3 days ago</td></tr>
+            <tr><td><b>Amit Singh</b></td><td>9988776655</td><td>18</td><td>₹4,210</td><td>₹234</td><td>5 days ago</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end .main -->
+
+<!-- RECEIPT MODAL -->
+<div class="modal-overlay" id="receipt-modal">
+  <div class="modal">
+    <h3 style="font-family:var(--font-serif);font-size:20px;margin-bottom:4px">Bill Generated ✅</h3>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:0">Receipt ready</p>
+    <div class="receipt" id="receipt-content"></div>
+    <button class="modal-close" onclick="closeModal()">Close & New Bill</button>
+  </div>
+</div>
+
+<script>
+const products=[
+  {id:1,name:"Amul Milk 1L",barcode:"BAR001",cat:"Dairy",price:62,stock:45,min:10,expiry:"2025-06-15"},
+  {id:2,name:"Parle-G Biscuits",barcode:"BAR002",cat:"Snacks",price:20,stock:200,min:30,expiry:"2025-12-31"},
+  {id:3,name:"Tata Salt 1kg",barcode:"BAR003",cat:"Staples",price:28,stock:80,min:15,expiry:"2026-01-01"},
+  {id:4,name:"Colgate Toothpaste",barcode:"BAR004",cat:"Personal Care",price:99,stock:5,min:10,expiry:"2026-06-01"},
+  {id:5,name:"Surf Excel 1kg",barcode:"BAR005",cat:"Cleaning",price:175,stock:3,min:5,expiry:"2026-03-01"},
+  {id:6,name:"Maggi Noodles",barcode:"BAR006",cat:"Snacks",price:14,stock:0,min:20,expiry:"2025-11-30"},
+  {id:7,name:"Aashirvaad Atta 5kg",barcode:"BAR007",cat:"Staples",price:280,stock:22,min:8,expiry:"2025-09-01"},
+  {id:8,name:"Kissan Jam",barcode:"BAR008",cat:"Condiments",price:135,stock:12,min:5,expiry:"2025-08-15"},
+  {id:9,name:"Coca Cola 2L",barcode:"BAR009",cat:"Beverages",price:95,stock:18,min:10,expiry:"2025-07-01"},
+  {id:10,name:"Lays Chips",barcode:"BAR010",cat:"Snacks",price:20,stock:60,min:20,expiry:"2025-10-15"},
+];
+
+let cart=[];
+let billCount=90;
+
+// Date
+const now=new Date();
+document.getElementById('today-date').textContent=now.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+document.getElementById('att-date').textContent=now.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+
+// Page nav
+function showPage(p,el){
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  el.classList.add('active');
+}
+
+// Revenue chart
+const revenue=[2800,3200,1900,4100,3600,2200,3800,4200,3100,2700,4800,3900,4100,4280];
+const days=['21','22','23','24','25','26','27','28','29','30','1','2','3','4'];
+const maxR=Math.max(...revenue);
+const chartEl=document.getElementById('revenue-chart');
+const labelsEl=document.getElementById('chart-labels');
+revenue.forEach((v,i)=>{
+  const wrap=document.createElement('div');wrap.className='bar-wrap';
+  const b=document.createElement('div');b.className='bar';b.style.height='120px';b.title='Day '+days[i]+': ₹'+v.toLocaleString('en-IN');
+  const f=document.createElement('div');f.className='bar-fill';f.style.height='0';
+  b.appendChild(f);wrap.appendChild(b);chartEl.appendChild(wrap);
+  const l=document.createElement('div');l.className='chart-label';l.textContent=days[i];labelsEl.appendChild(l);
+  setTimeout(()=>{f.style.height=Math.round(v/maxR*100)+'%'},150+i*40);
+});
+
+// Products list
+function renderProducts(list){
+  const el=document.getElementById('product-list');el.innerHTML='';
+  list.forEach(p=>{
+    const r=document.createElement('div');r.className='product-row';
+    if(p.stock===0){r.style.opacity='0.5';r.style.cursor='default';}
+    const stockInfo=p.stock===0?'<span style="color:var(--danger);font-size:10px;font-weight:500">Out of stock</span>':
+      p.stock<=p.min?`<span style="color:var(--warn);font-size:10px">Low: ${p.stock} left</span>`:
+      `<span style="font-size:10px;color:var(--muted)">Stock: ${p.stock}</span>`;
+    r.innerHTML=`<div style="flex:1"><div class="product-row-name">${p.name}</div><div class="product-row-cat">${p.cat} · ${stockInfo}</div></div><div class="product-row-price">₹${p.price}</div>`;
+    if(p.stock>0)r.onclick=()=>addToCart(p);
+    el.appendChild(r);
+  });
+}
+renderProducts(products);
+
+function filterProducts(q){
+  renderProducts(products.filter(p=>p.name.toLowerCase().includes(q.toLowerCase())||p.barcode.toLowerCase().includes(q.toLowerCase())));
+}
+
+function addToCart(p){
+  const ex=cart.find(x=>x.id===p.id);
+  if(ex){if(ex.qty<p.stock)ex.qty++;}
+  else cart.push({...p,qty:1});
+  renderCart();
+}
+
+function renderCart(){
+  const el=document.getElementById('cart-list');
+  const empty=document.getElementById('cart-empty');
+  el.innerHTML='';
+  if(cart.length===0){empty.style.display='block';updateSummary();return;}
+  empty.style.display='none';
+  cart.forEach((item,i)=>{
+    const d=document.createElement('div');d.className='cart-item';
+    d.innerHTML=`
+      <div class="cart-item-name">${item.name}<div style="font-size:10px;color:var(--muted)">₹${item.price} each</div></div>
+      <div class="qty-ctrl">
+        <button class="qty-btn" onclick="changeQty(${i},-1)">−</button>
+        <span class="qty-num">${item.qty}</span>
+        <button class="qty-btn" onclick="changeQty(${i},1)">+</button>
+      </div>
+      <div class="cart-item-sub">₹${item.price*item.qty}</div>
+      <button class="del-btn" onclick="removeItem(${i})">✕</button>`;
+    el.appendChild(d);
+  });
+  updateSummary();
+}
+
+function changeQty(i,d){
+  cart[i].qty+=d;
+  if(cart[i].qty<=0)cart.splice(i,1);
+  renderCart();
+}
+function removeItem(i){cart.splice(i,1);renderCart();}
+function updateSummary(){
+  const sub=cart.reduce((a,x)=>a+x.price*x.qty,0);
+  const disc=parseFloat(document.getElementById('discount').value)||0;
+  const total=Math.max(sub-disc,0);
+  document.getElementById('subtotal').textContent='₹'+sub.toFixed(2);
+  document.getElementById('disc-display').textContent='₹'+disc.toFixed(2);
+  document.getElementById('total-display').textContent='₹'+total.toFixed(2);
+}
+
+function generateBill(){
+  if(cart.length===0){alert('Cart is empty!');return;}
+  billCount++;
+  const sub=cart.reduce((a,x)=>a+x.price*x.qty,0);
+  const disc=parseFloat(document.getElementById('discount').value)||0;
+  const total=Math.max(sub-disc,0);
+  const cname=document.getElementById('cust-name').value||'Walk-in';
+  const cphone=document.getElementById('cust-phone').value||'-';
+  const bnum='BILL0'+billCount;
+  const dateStr=new Date().toLocaleString('en-IN');
+  let lines=[
+    '        FreshMart        ',
+    '=========================',
+    'Bill : '+bnum,
+    'Date : '+dateStr,
+    'Cust : '+cname,
+    'Phone: '+cphone,
+    '-------------------------',
+    'Item            Qty  Sub ',
+    '-------------------------'
+  ];
+  cart.forEach(item=>{
+    const name=item.name.slice(0,14).padEnd(14);
+    const qty=String(item.qty).padStart(3);
+    const sub='₹'+String(item.price*item.qty).padStart(5);
+    lines.push(name+qty+' '+sub);
+  });
+  lines.push('=========================');
+  lines.push('Subtotal:       ₹'+sub.toFixed(2).padStart(7));
+  lines.push('Discount:       ₹'+disc.toFixed(2).padStart(7));
+  lines.push('TOTAL:          ₹'+total.toFixed(2).padStart(7));
+  lines.push('=========================');
+  lines.push('   Thank you! Come again  ');
+  document.getElementById('receipt-content').textContent=lines.join('\n');
+  document.getElementById('receipt-modal').classList.add('open');
+}
+
+function closeModal(){
+  document.getElementById('receipt-modal').classList.remove('open');
+  cart=[];
+  document.getElementById('cust-name').value='';
+  document.getElementById('cust-phone').value='';
+  document.getElementById('discount').value='0';
+  renderCart();
+}
+
+// Inventory
+function renderInventory(filter){
+  const el=document.getElementById('inv-grid');el.innerHTML='';
+  let list=products;
+  if(filter==='low')list=products.filter(p=>p.stock>0&&p.stock<=p.min);
+  else if(filter==='out')list=products.filter(p=>p.stock===0);
+  else if(filter==='expiry')list=products.filter(p=>p.expiry<='2025-09-01');
+  if(list.length===0){el.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:13px">No products in this filter</div>';return;}
+  list.forEach(p=>{
+    const pct=p.stock===0?0:Math.min(100,Math.round(p.stock/p.min*50));
+    const cls=p.stock===0?'out':p.stock<=p.min?'low':'ok';
+    const statusLabel=p.stock===0?'Out of Stock':p.stock<=p.min?'Low Stock':'In Stock';
+    const badgeCls=cls==='ok'?'success':cls==='low'?'pending':'danger';
+    const d=document.createElement('div');d.className='inv-item';
+    d.innerHTML=`
+      <div class="inv-item-top">
+        <div><div class="inv-name">${p.name}</div><div class="inv-cat">${p.cat}</div></div>
+        <span class="badge ${badgeCls}" style="white-space:nowrap">${statusLabel}</span>
+      </div>
+      <div class="stock-bar"><div class="stock-fill ${cls}" style="width:0" data-pct="${pct}"></div></div>
+      <div class="inv-footer"><span>${p.stock} units · Min: ${p.min}</span><span>Exp: ${p.expiry}</span></div>`;
+    el.appendChild(d);
+  });
+  setTimeout(()=>{
+    document.querySelectorAll('.stock-fill[data-pct]').forEach(f=>{
+      f.style.width=f.dataset.pct+'%';
+    });
+  },100);
+}
+renderInventory('all');
+
+function filterInv(f,el){
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  renderInventory(f);
+}
+
+// Attendance
+const employees=[
+  {name:'Alice Kumar',role:'Cashier',status:'present',color:'#16a34a'},
+  {name:'Bob Sharma',role:'Stock Manager',status:'present',color:'#ea580c'},
+  {name:'Charlie Raj',role:'Cashier',status:'absent',color:'#2563eb'},
+  {name:'Diana Singh',role:'Helper',status:'leave',color:'#7c3aed'},
+  {name:'Ethan Nair',role:'Security',status:'present',color:'#d97706'},
+];
+const attGrid=document.getElementById('att-grid');
+employees.forEach((emp,i)=>{
+  const d=document.createElement('div');d.className='emp-row';
+  const initials=emp.name.split(' ').map(x=>x[0]).join('');
+  d.innerHTML=`
+    <div class="avatar" style="background:${emp.color}">${initials}</div>
+    <div class="emp-info"><div class="emp-name">${emp.name}</div><div class="emp-role">${emp.role}</div></div>
+    <div class="att-btns">
+      <button class="att-btn present ${emp.status==='present'?'sel':''}" onclick="setAtt(this,'present')">✓ Present</button>
+      <button class="att-btn absent ${emp.status==='absent'?'sel':''}" onclick="setAtt(this,'absent')">✗ Absent</button>
+      <button class="att-btn leave ${emp.status==='leave'?'sel':''}" onclick="setAtt(this,'leave')">⊙ Leave</button>
+    </div>`;
+  attGrid.appendChild(d);
+});
+
+function setAtt(btn,type){
+  const row=btn.closest('.emp-row');
+  row.querySelectorAll('.att-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  updateAttSummary();
+}
+
+function updateAttSummary(){
+  const rows=document.querySelectorAll('.emp-row');
+  let p=0,a=0,l=0;
+  rows.forEach(row=>{
+    if(row.querySelector('.att-btn.present.sel'))p++;
+    else if(row.querySelector('.att-btn.absent.sel'))a++;
+    else if(row.querySelector('.att-btn.leave.sel'))l++;
+  });
+  document.getElementById('present-count').textContent=p;
+  document.getElementById('absent-count').textContent=a;
+  document.getElementById('leave-count').textContent=l;
+}
+
+// Analytics top products
+const topProds=[
+  {name:'Aashirvaad Atta 5kg',rev:14280,units:51},
+  {name:'Surf Excel 1kg',rev:8750,units:50},
+  {name:'Coca Cola 2L',rev:7600,units:80},
+  {name:'Amul Milk 1L',rev:6820,units:110},
+  {name:'Colgate Toothpaste',rev:5940,units:60},
+];
+const tp=document.getElementById('top-products');
+const maxRev=topProds[0].rev;
+topProds.forEach(p=>{
+  const pct=Math.round(p.rev/maxRev*100);
+  const d=document.createElement('div');d.className='bar-h-wrap';
+  d.innerHTML=`
+    <div class="bar-h-label">
+      <span style="font-weight:500">${p.name}</span>
+      <span style="color:var(--muted)">${p.units} units · ₹${p.rev.toLocaleString('en-IN')}</span>
+    </div>
+    <div class="bar-h-track"><div class="bar-h-fill" style="width:0" data-pct="${pct}"></div></div>`;
+  tp.appendChild(d);
+});
+setTimeout(()=>{
+  document.querySelectorAll('.bar-h-fill[data-pct]').forEach(f=>{
+    f.style.width=f.dataset.pct+'%';
+  });
+},200);
+</script>
+</body>
+</html>
