@@ -25,7 +25,10 @@ if "logged_in" not in st.session_state:
 
 # ── LOGIN PAGE ─────────────────────────────────────
 def login():
-    st.image("https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1200", use_column_width=True)
+    st.image(
+        "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1200",
+        width="stretch"
+    )
     st.title("📚 Fitmat Coaching Classes")
 
     user = st.text_input("Username")
@@ -81,11 +84,17 @@ def dashboard():
             st.metric("Attendance", "92%")
             st.metric("Avg Score", "82")
         with col2:
-            st.image("https://images.unsplash.com/photo-1588072432836-e10032774350?w=500", use_column_width=True)
+            st.image(
+                "https://images.unsplash.com/photo-1588072432836-e10032774350?w=500",
+                width="stretch"
+            )
 
     # ── TIMETABLE ──
     elif menu == "Timetable":
-        st.image("https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=1200", use_column_width=True)
+        st.image(
+            "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=1200",
+            width="stretch"
+        )
 
         df = pd.DataFrame({
             "Day": ["Monday", "Tuesday", "Wednesday"],
@@ -104,7 +113,7 @@ def dashboard():
         cols = st.columns(3)
         for i, (title, subject, img) in enumerate(notes):
             with cols[i % 3]:
-                st.image(img, use_column_width=True)
+                st.image(img, width="stretch")
                 st.write(f"📘 **{title}**")
                 st.caption(subject)
 
@@ -116,7 +125,10 @@ def dashboard():
 
     # ── PERFORMANCE ──
     elif menu == "Performance":
-        st.image("https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200", use_column_width=True)
+        st.image(
+            "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200",
+            width="stretch"
+        )
 
         data = get_performance()
 
