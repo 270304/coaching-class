@@ -22,9 +22,16 @@ USERS = {
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
-# ── LOGIN ──────────────────────────────────────────
+# ── LOGIN PAGE ─────────────────────────────────────
 def login():
-    st.title("🔐 Fitmat Login")
+    st.markdown("## 📚 Fitmat Coaching Classes")
+
+    st.image(
+        "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1000",
+        use_column_width=True
+    )
+
+    st.subheader("🔐 Login")
 
     user = st.text_input("Username")
     pwd = st.text_input("Password", type="password")
@@ -46,9 +53,9 @@ def get_performance():
 
 def get_notes():
     return [
-        ("Algebra", "Math"),
-        ("Trigonometry", "Math"),
-        ("Physics Basics", "Science"),
+        ("Algebra", "Math", "https://images.unsplash.com/photo-1633356122544-f134324ef6db?w=300"),
+        ("Trigonometry", "Math", "https://images.unsplash.com/photo-1509228468518-180dd4864904?w=300"),
+        ("Physics Basics", "Science", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=300"),
     ]
 
 def get_attendance():
@@ -71,19 +78,33 @@ def dashboard():
 
     st.title(f"Welcome {st.session_state.user['name']} 👋")
 
-    # 🔔 Notifications
+    # 🔔 Notification
     st.toast("Welcome back!")
 
     # ── DASHBOARD ──
     if menu == "Dashboard":
-        st.metric("Attendance", "92%")
-        st.metric("Avg Score", "82")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.metric("Attendance", "92%")
+            st.metric("Avg Score", "82")
+
+        with col2:
+            st.image(
+                "https://images.unsplash.com/photo-1588072432836-e10032774350?w=500",
+                use_column_width=True
+            )
 
     # ── TIMETABLE ──
     elif menu == "Timetable":
+        st.image(
+            "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=1000",
+            use_column_width=True
+        )
+
         df = pd.DataFrame({
-            "Day": ["Mon", "Tue"],
-            "Subject": ["Math", "Science"]
+            "Day": ["Monday", "Tuesday", "Wednesday"],
+            "Subject": ["Math", "Science", "English"]
         })
         st.dataframe(df)
 
@@ -91,36 +112,48 @@ def dashboard():
     elif menu == "Study Material":
         st.subheader("📄 Notes")
 
-        search = st.text_input("Search")
+        search = st.text_input("🔍 Search notes")
 
         notes = get_notes()
         notes = [n for n in notes if search.lower() in n[0].lower()]
 
-        for title, subject in notes:
-            st.write(f"📘 {title} ({subject})")
+        cols = st.columns(3)
 
-            st.download_button(
-                "Download",
-                data="Sample content",
-                file_name=f"{title}.txt"
-            )
+        for i, (title, subject, img) in enumerate(notes):
+            with cols[i % 3]:
+                st.image(img, use_column_width=True)
+                st.write(f"📘 **{title}**")
+                st.caption(subject)
+
+                st.download_button(
+                    "⬇ Download",
+                    data="Sample content",
+                    file_name=f"{title}.txt"
+                )
 
     # ── PERFORMANCE ──
     elif menu == "Performance":
         data = get_performance()
 
-        # 📊 Chart
-        fig = px.line(y=data["tests"], markers=True, title="Performance")
+        st.image(
+            "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1000",
+            use_column_width=True
+        )
+
+        # 📊 Line Chart
+        fig = px.line(y=data["tests"], markers=True, title="Performance Trend")
         st.plotly_chart(fig, use_container_width=True)
 
-        # 📊 Subject
-        fig2 = px.bar(x=list(data["subjects"].keys()),
-                      y=list(data["subjects"].values()),
-                      title="Subjects")
+        # 📊 Bar Chart
+        fig2 = px.bar(
+            x=list(data["subjects"].keys()),
+            y=list(data["subjects"].values()),
+            title="Subject Scores"
+        )
         st.plotly_chart(fig2, use_container_width=True)
 
         # 📅 Attendance
-        st.subheader("Attendance")
+        st.subheader("📅 Attendance")
         st.dataframe(get_attendance())
 
 # ── ROUTER ─────────────────────────────────────────
