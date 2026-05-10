@@ -1,5 +1,5 @@
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, date
 import pandas as pd
 import plotly.graph_objects as go
 import random
@@ -190,6 +190,15 @@ NOTES = [
      "https://images.unsplash.com/photo-1461360228754-6e81c478b882?w=400&q=80"),
 ]
 
+DEFAULT_TIMETABLE = {
+    "Monday":    {"08:00": "Math", "09:00": "Science", "10:00": "English", "11:00": "History", "12:00": "—", "13:00": "Math", "14:00": "Science"},
+    "Tuesday":   {"08:00": "English", "09:00": "Math", "10:00": "History", "11:00": "Science", "12:00": "—", "13:00": "English", "14:00": "Math"},
+    "Wednesday": {"08:00": "Science", "09:00": "History", "10:00": "Math", "11:00": "English", "12:00": "—", "13:00": "Science", "14:00": "History"},
+    "Thursday":  {"08:00": "Math", "09:00": "English", "10:00": "Science", "11:00": "Math", "12:00": "—", "13:00": "History", "14:00": "English"},
+    "Friday":    {"08:00": "History", "09:00": "Science", "10:00": "Math", "11:00": "English", "12:00": "—", "13:00": "Science", "14:00": "Math"},
+    "Saturday":  {"08:00": "Math", "09:00": "Science", "10:00": "—", "11:00": "—", "12:00": "—", "13:00": "—", "14:00": "—"},
+}
+
 SUBJ_COLOR = {"Math": "#22c55e", "Science": "#3b82f6", "English": "#f59e0b", "History": "#ef4444"}
 PLOT = dict(
     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
@@ -202,14 +211,27 @@ PLOT = dict(
 # ── SESSION STATE INIT ────────────────────────────────────────────────────────
 if "teacher" not in st.session_state:
     st.session_state.teacher = None
-# Single source of truth for students — shared by Students + Attendance pages
 if "students" not in st.session_state:
     st.session_state.students = [s.copy() for s in DEFAULT_STUDENTS]
-# Attendance records  { "YYYY-MM-DD": { "StudentName": True/False, ... } }
 if "att_records" not in st.session_state:
     st.session_state.att_records = {}
 if "uploaded_notes" not in st.session_state:
     st.session_state.uploaded_notes = []
+# New feature state
+if "grade_records" not in st.session_state:
+    # { student_name: { subject: { term: score } } }
+    st.session_state.grade_records = {}
+if "timetable" not in st.session_state:
+    import copy
+    st.session_state.timetable = copy.deepcopy(DEFAULT_TIMETABLE)
+if "announcements" not in st.session_state:
+    st.session_state.announcements = [
+        {"title": "Annual Sports Day", "body": "Annual Sports Day is scheduled for 20th June. All students must participate.", "author": "Mrs. Priya Sharma", "date": "08 May 2025", "pinned": True, "tag": "Event"},
+        {"title": "Exam Schedule Released", "body": "Mid-term exams begin 2nd June. Timetable pinned on the notice board.", "author": "Mr. Arjun Mehta", "date": "05 May 2025", "pinned": False, "tag": "Exam"},
+    ]
+if "remarks" not in st.session_state:
+    # { student_name: [ { teacher, subject, remark, date } ] }
+    st.session_state.remarks = {}
 
 # ── SIDEBAR ───────────────────────────────────────────────────────────────────
 t = st.session_state.teacher
@@ -234,8 +256,9 @@ if t:
     <hr style="border:none;border-top:1px solid #222;margin:0 0 0.3rem 0;">
     """, unsafe_allow_html=True)
 
-pages = ["About Us", "Teacher Login", "Attendance", "Notes", "Students"]
-icons = ["🏫", "👩‍🏫", "📋", "📝", "🎒"]
+pages = ["About Us", "Teacher Login", "Attendance", "Notes", "Students",
+         "Report Cards", "Timetable", "Announcements", "Feedback", "Leaderboard"]
+icons = ["🏫", "👩‍🏫", "📋", "📝", "🎒", "📊", "📅", "📢", "💬", "🏆"]
 menu = st.sidebar.radio(
     "",
     [f"{icons[i]}  {p}" for i, p in enumerate(pages)],
@@ -296,6 +319,19 @@ def att_badge(status):
         return '<span style="background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:20px;padding:2px 10px;font-size:0.72rem;font-weight:600;">A</span>'
     else:
         return '<span style="background:rgba(245,158,11,0.12);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);border-radius:20px;padding:2px 10px;font-size:0.72rem;font-weight:600;">L</span>'
+
+def grade_color(score):
+    if score >= 80: return "#22c55e"
+    if score >= 60: return "#f59e0b"
+    return "#ef4444"
+
+def grade_letter(score):
+    if score >= 90: return "A+"
+    if score >= 80: return "A"
+    if score >= 70: return "B"
+    if score >= 60: return "C"
+    if score >= 50: return "D"
+    return "F"
 
 # ── MAIN ──────────────────────────────────────────────────────────────────────
 pad(32)
@@ -502,7 +538,7 @@ with content:
                     st.markdown("| Username | Password |\n|---|---|\n| `teacher1` | `teach123` |\n| `teacher2` | `teach456` |")
 
     # ══════════════════════════════════════════════════════════════
-    # ATTENDANCE  ← now fully driven by st.session_state.students
+    # ATTENDANCE
     # ══════════════════════════════════════════════════════════════
     elif selected == "Attendance":
         t = st.session_state.teacher
@@ -525,12 +561,10 @@ with content:
 
             date_key = str(date_sel)
 
-            # Initialise attendance state for this date if missing
             if date_key not in st.session_state.att_records:
                 st.session_state.att_records[date_key] = {
                     s["Name"]: "Present" for s in students
                 }
-            # Add any newly added students to existing date records
             for s in students:
                 if s["Name"] not in st.session_state.att_records[date_key]:
                     st.session_state.att_records[date_key][s["Name"]] = "Present"
@@ -567,7 +601,6 @@ with content:
                 l_cnt  = sum(1 for v in rec.values() if v == "Late")
                 st.success(f"✅ Saved for {date_sel.strftime('%d %b %Y')} — {p_cnt} Present · {a_cnt} Absent · {l_cnt} Late")
 
-            # ── Summary metrics ──
             pad(8)
             rec = st.session_state.att_records[date_key]
             p_cnt = sum(1 for v in rec.values() if v == "Present")
@@ -578,7 +611,6 @@ with content:
             m2.metric("Absent",  a_cnt)
             m3.metric("Late",    l_cnt)
 
-            # ── Donut chart ──
             total = len(students)
             if total > 0:
                 fig = go.Figure(go.Pie(
@@ -598,7 +630,6 @@ with content:
                 )
                 st.plotly_chart(fig, use_container_width=True)
 
-            # ── Weekly summary table if multiple dates saved ──
             if len(st.session_state.att_records) > 1:
                 sec("Weekly Attendance Overview")
                 dates_sorted = sorted(st.session_state.att_records.keys())[-7:]
@@ -676,7 +707,7 @@ with content:
                                 file_name=f"{title.replace(' ','_')}.txt", key=f"dl_{i}")
 
     # ══════════════════════════════════════════════════════════════
-    # STUDENTS  ← add students here; attendance auto-syncs
+    # STUDENTS
     # ══════════════════════════════════════════════════════════════
     elif selected == "Students":
         t = st.session_state.teacher
@@ -699,7 +730,6 @@ with content:
             c3.metric("Avg Score",      avg_score)
             pad(12)
 
-            # ── ADD STUDENT FORM ──────────────────────────────────
             with st.expander("➕  Add New Student", expanded=False):
                 with st.form("add_student_form", clear_on_submit=True):
                     sec("Student Details")
@@ -733,14 +763,12 @@ with content:
                             "img":        new_img.strip() or "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&q=80",
                         }
                         st.session_state.students.append(new_student)
-                        # Auto-add this student to ALL existing attendance records as "Present"
                         for date_key in st.session_state.att_records:
                             if new_student["Name"] not in st.session_state.att_records[date_key]:
                                 st.session_state.att_records[date_key][new_student["Name"]] = "Present"
-                        st.success(f"✅ {new_name} added! They will appear in the Attendance list automatically.")
+                        st.success(f"✅ {new_name} added!")
                         st.rerun()
 
-            # ── SEARCH & FILTER ───────────────────────────────────
             search_s = st.text_input("🔍  Search students", placeholder="Name or Roll No…")
             filter_s = st.selectbox("Filter by Class", ["All"] + sorted({s.get("Class","—") for s in students}))
 
@@ -757,8 +785,6 @@ with content:
                 bar_color  = "#22c55e" if score >= 80 else "#f59e0b" if score >= 70 else "#ef4444"
                 perf_label = "Top" if score >= 80 else "Average" if score >= 70 else "Needs Attention"
                 label_color = bar_color
-
-                # Latest attendance status for this student
                 latest_status = "—"
                 if st.session_state.att_records:
                     latest_date = sorted(st.session_state.att_records.keys())[-1]
@@ -789,7 +815,6 @@ with content:
                 </div>
                 """)
 
-            # ── DELETE STUDENT ────────────────────────────────────
             if students:
                 pad(8)
                 sec("Remove a Student")
@@ -802,7 +827,6 @@ with content:
                         st.success(f"Removed {del_name} from students and attendance.")
                         st.rerun()
 
-            # ── SCORE CHART ───────────────────────────────────────
             if filtered:
                 sec("Score Chart")
                 fig = go.Figure(go.Bar(
@@ -816,3 +840,456 @@ with content:
                 ))
                 fig.update_layout(height=260, **PLOT)
                 st.plotly_chart(fig, use_container_width=True)
+
+    # ══════════════════════════════════════════════════════════════
+    # REPORT CARDS — teacher-only
+    # ══════════════════════════════════════════════════════════════
+    elif selected == "Report Cards":
+        t = st.session_state.teacher
+        header("REPORT CARDS", "Grade tracker & student report cards")
+        if not t:
+            lock_gate("Report Cards")
+        else:
+            students = st.session_state.students
+            ALL_SUBJECTS = ["Math", "Science", "English", "History"]
+            TERMS = ["Term 1", "Term 2", "Term 3", "Final"]
+
+            G("""<div style="border-radius:12px;overflow:hidden;margin-bottom:1rem;">
+                <img src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=1200&q=80"
+                     style="width:100%;height:100px;object-fit:cover;display:block;filter:brightness(0.28);">
+            </div>""")
+
+            # ── Enter / Edit grades ──
+            with st.expander("✏️  Enter / Update Grades", expanded=False):
+                with st.form("grade_form"):
+                    g_student = st.selectbox("Student", [s["Name"] for s in students])
+                    g_subject = st.selectbox("Subject", ALL_SUBJECTS)
+                    g_term    = st.selectbox("Term",    TERMS)
+                    g_score   = st.number_input("Score (0–100)", 0, 100, 75)
+                    if st.form_submit_button("Save Grade"):
+                        gr = st.session_state.grade_records
+                        if g_student not in gr: gr[g_student] = {}
+                        if g_subject not in gr[g_student]: gr[g_student][g_subject] = {}
+                        gr[g_student][g_subject][g_term] = int(g_score)
+                        st.success(f"✅ Grade saved: {g_student} · {g_subject} · {g_term} → {g_score}")
+
+            # ── View individual report card ──
+            sec("View Report Card")
+            view_student = st.selectbox("Select Student", [s["Name"] for s in students], key="rc_sel")
+            stu_data     = next((s for s in students if s["Name"] == view_student), None)
+            gr           = st.session_state.grade_records.get(view_student, {})
+
+            if stu_data:
+                # Header card
+                G(f"""
+                <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-top:3px solid #22c55e;
+                            border-radius:12px;padding:1.2rem 1.5rem;margin-bottom:1rem;
+                            display:flex;align-items:center;gap:16px;">
+                    <img src="{stu_data.get('img','')}" style="width:54px;height:54px;border-radius:50%;object-fit:cover;border:2px solid #22c55e;">
+                    <div style="flex:1;">
+                        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:#e8e8e8;letter-spacing:1px;">{view_student}</div>
+                        <div style="font-size:0.78rem;color:#555;">Roll {stu_data.get('Roll','—')} · {stu_data.get('Class','—')} · Attendance: {stu_data.get('Attendance','—')}</div>
+                    </div>
+                </div>
+                """)
+
+                if gr:
+                    # Build grade table
+                    rows = []
+                    for subj in ALL_SUBJECTS:
+                        row = {"Subject": subj}
+                        term_scores = gr.get(subj, {})
+                        total = 0; count = 0
+                        for term in TERMS:
+                            sc = term_scores.get(term, "—")
+                            row[term] = sc
+                            if sc != "—":
+                                total += sc; count += 1
+                        row["Average"] = round(total/count) if count else "—"
+                        row["Grade"]   = grade_letter(row["Average"]) if row["Average"] != "—" else "—"
+                        rows.append(row)
+                    df = pd.DataFrame(rows)
+                    st.dataframe(df, use_container_width=True, hide_index=True)
+
+                    # Radar chart for latest scores
+                    subj_avgs = []
+                    for subj in ALL_SUBJECTS:
+                        scores = [v for v in gr.get(subj, {}).values() if isinstance(v, (int, float))]
+                        subj_avgs.append(round(sum(scores)/len(scores)) if scores else 0)
+
+                    fig = go.Figure(go.Scatterpolar(
+                        r=subj_avgs + [subj_avgs[0]],
+                        theta=ALL_SUBJECTS + [ALL_SUBJECTS[0]],
+                        fill='toself',
+                        fillcolor='rgba(34,197,94,0.1)',
+                        line=dict(color='#22c55e', width=2)
+                    ))
+                    fig.update_layout(
+                        polar=dict(
+                            bgcolor='#111',
+                            radialaxis=dict(visible=True, range=[0, 100], gridcolor='#2a2a2a', color='#444'),
+                            angularaxis=dict(gridcolor='#2a2a2a', color='#666')
+                        ),
+                        height=300,
+                        **PLOT
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+
+                    # CSV download
+                    csv = df.to_csv(index=False)
+                    st.download_button(f"⬇ Download {view_student}'s Report Card (CSV)",
+                                       data=csv, file_name=f"{view_student.replace(' ','_')}_report.csv",
+                                       mime="text/csv")
+                else:
+                    st.info("No grades recorded yet for this student. Use the form above to enter grades.")
+
+            # ── Class overview table ──
+            sec("Class Grade Overview")
+            overview_rows = []
+            for s in students:
+                g = st.session_state.grade_records.get(s["Name"], {})
+                all_scores = [sc for subj_data in g.values() for sc in subj_data.values() if isinstance(sc, (int, float))]
+                avg = round(sum(all_scores)/len(all_scores)) if all_scores else "—"
+                overview_rows.append({
+                    "Student": s["Name"], "Class": s.get("Class","—"), "Roll": s.get("Roll","—"),
+                    "Overall Avg": avg,
+                    "Grade": grade_letter(avg) if avg != "—" else "—",
+                    "Attendance": s.get("Attendance","—")
+                })
+            st.dataframe(pd.DataFrame(overview_rows), use_container_width=True, hide_index=True)
+
+    # ══════════════════════════════════════════════════════════════
+    # TIMETABLE — public (read); teacher can edit
+    # ══════════════════════════════════════════════════════════════
+    elif selected == "Timetable":
+        t = st.session_state.teacher
+        header("TIMETABLE", "Class schedule & weekly planner", "PUBLIC")
+
+        G("""<div style="border-radius:12px;overflow:hidden;margin-bottom:1rem;">
+            <img src="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?w=1200&q=80"
+                 style="width:100%;height:100px;object-fit:cover;display:block;filter:brightness(0.28);">
+        </div>""")
+
+        DAYS  = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]
+        HOURS = ["08:00","09:00","10:00","11:00","12:00","13:00","14:00"]
+        tt    = st.session_state.timetable
+
+        # Highlight today
+        today_name = datetime.now().strftime("%A")
+
+        # Build HTML table
+        hdr_cells = "".join(
+            f'<th style="padding:8px 14px;font-size:0.72rem;font-weight:600;letter-spacing:1px;'
+            f'color:{"#22c55e" if d == today_name else "#555"};text-transform:uppercase;'
+            f'border-bottom:1px solid {"#22c55e" if d == today_name else "#222"};">{d[:3]}</th>'
+            for d in DAYS
+        )
+        body_rows = ""
+        for h in HOURS:
+            cells = ""
+            for d in DAYS:
+                subj = tt.get(d, {}).get(h, "—")
+                c = SUBJ_COLOR.get(subj, "#333")
+                if subj == "—" or subj == "":
+                    cell_inner = '<span style="color:#333;font-size:0.78rem;">—</span>'
+                elif h == "12:00":
+                    cell_inner = '<span style="color:#555;font-size:0.72rem;font-style:italic;">Lunch</span>'
+                else:
+                    cell_inner = f'<span style="background:{c}20;color:{c};border:1px solid {c}40;border-radius:6px;padding:2px 8px;font-size:0.75rem;font-weight:600;">{subj}</span>'
+                bg = "rgba(34,197,94,0.04)" if d == today_name else "transparent"
+                cells += f'<td style="padding:8px 14px;text-align:center;background:{bg};">{cell_inner}</td>'
+            body_rows += f'<tr><td style="padding:8px 14px;font-size:0.76rem;color:#555;font-weight:600;white-space:nowrap;">{h}</td>{cells}</tr>'
+
+        G(f"""
+        <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;overflow:auto;margin-bottom:1rem;">
+            <table style="width:100%;border-collapse:collapse;">
+                <thead>
+                    <tr>
+                        <th style="padding:8px 14px;font-size:0.68rem;color:#333;text-transform:uppercase;">Time</th>
+                        {hdr_cells}
+                    </tr>
+                </thead>
+                <tbody>{body_rows}</tbody>
+            </table>
+        </div>
+        """)
+
+        # Subject legend
+        legend = " ".join(f'<span style="background:{c}20;color:{c};border:1px solid {c}40;border-radius:20px;padding:3px 10px;font-size:0.72rem;font-weight:600;">{s}</span>'
+                          for s, c in SUBJ_COLOR.items())
+        G(f'<div style="margin-bottom:1rem;">{legend}</div>')
+
+        # Teacher-only: edit timetable
+        if t:
+            with st.expander("✏️  Edit Timetable (Teacher Only)", expanded=False):
+                with st.form("tt_form"):
+                    ec1, ec2, ec3 = st.columns(3)
+                    with ec1: e_day  = st.selectbox("Day",     DAYS)
+                    with ec2: e_hour = st.selectbox("Period",  HOURS)
+                    with ec3: e_subj = st.selectbox("Subject", ["—","Math","Science","English","History","Free","Lunch"])
+                    if st.form_submit_button("Update Slot"):
+                        st.session_state.timetable[e_day][e_hour] = e_subj
+                        st.success(f"✅ Updated {e_day} {e_hour} → {e_subj}")
+                        st.rerun()
+
+    # ══════════════════════════════════════════════════════════════
+    # ANNOUNCEMENTS — public read; teacher post
+    # ══════════════════════════════════════════════════════════════
+    elif selected == "Announcements":
+        t = st.session_state.teacher
+        header("ANNOUNCEMENTS", "School notices & updates", "PUBLIC")
+
+        G("""<div style="border-radius:12px;overflow:hidden;margin-bottom:1rem;">
+            <img src="https://images.unsplash.com/photo-1516321497487-e288fb19713f?w=1200&q=80"
+                 style="width:100%;height:100px;object-fit:cover;display:block;filter:brightness(0.25);">
+        </div>""")
+
+        TAG_COLORS = {"Event":"#3b82f6","Exam":"#ef4444","Holiday":"#22c55e","General":"#888","Urgent":"#f97316"}
+
+        # Teacher post form
+        if t:
+            with st.expander("📢  Post New Announcement", expanded=False):
+                with st.form("ann_form"):
+                    a_title  = st.text_input("Title *", placeholder="e.g. Parent-Teacher Meeting")
+                    a_body   = st.text_area("Message *", placeholder="Details…")
+                    ac1, ac2 = st.columns(2)
+                    with ac1: a_tag    = st.selectbox("Tag", ["General","Event","Exam","Holiday","Urgent"])
+                    with ac2: a_pinned = st.checkbox("📌 Pin this announcement")
+                    if st.form_submit_button("Post Announcement"):
+                        if not a_title.strip() or not a_body.strip():
+                            st.error("Title and message are required.")
+                        else:
+                            st.session_state.announcements.insert(0, {
+                                "title": a_title.strip(), "body": a_body.strip(),
+                                "author": t["name"],
+                                "date": datetime.now().strftime("%d %b %Y"),
+                                "pinned": a_pinned, "tag": a_tag
+                            })
+                            st.success("✅ Announcement posted!")
+                            st.rerun()
+
+        anns = st.session_state.announcements
+        pinned   = [a for a in anns if a.get("pinned")]
+        unpinned = [a for a in anns if not a.get("pinned")]
+
+        if pinned:
+            sec("📌 Pinned")
+            for a in pinned:
+                tc = TAG_COLORS.get(a.get("tag","General"), "#888")
+                G(f"""
+                <div style="background:#1a1a1a;border:1px solid #22c55e;border-left:4px solid #22c55e;
+                            border-radius:12px;padding:1rem 1.3rem;margin-bottom:0.7rem;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <span style="font-weight:700;font-size:0.95rem;color:#e8e8e8;">📌 {a['title']}</span>
+                        <span style="background:{tc}20;color:{tc};border:1px solid {tc}40;border-radius:20px;padding:2px 10px;font-size:0.68rem;font-weight:600;">{a.get('tag','General')}</span>
+                    </div>
+                    <div style="font-size:0.84rem;color:#999;line-height:1.7;margin-bottom:6px;">{a['body']}</div>
+                    <div style="font-size:0.72rem;color:#444;">{a['author']} · {a['date']}</div>
+                </div>
+                """)
+
+        sec("All Notices")
+        if not unpinned and not pinned:
+            st.info("No announcements yet.")
+        for a in unpinned:
+            tc = TAG_COLORS.get(a.get("tag","General"), "#888")
+            G(f"""
+            <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-left:3px solid {tc};
+                        border-radius:12px;padding:1rem 1.3rem;margin-bottom:0.7rem;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <span style="font-weight:600;font-size:0.9rem;color:#e8e8e8;">{a['title']}</span>
+                    <span style="background:{tc}20;color:{tc};border:1px solid {tc}40;border-radius:20px;padding:2px 10px;font-size:0.68rem;font-weight:600;">{a.get('tag','General')}</span>
+                </div>
+                <div style="font-size:0.84rem;color:#999;line-height:1.7;margin-bottom:6px;">{a['body']}</div>
+                <div style="font-size:0.72rem;color:#444;">{a['author']} · {a['date']}</div>
+            </div>
+            """)
+
+        # Delete (teacher only)
+        if t and anns:
+            pad(6)
+            sec("Remove Announcement (Teacher Only)")
+            del_ann = st.selectbox("Select to delete", ["— select —"] + [f"{i+1}. {a['title']}" for i, a in enumerate(anns)])
+            if del_ann != "— select —":
+                idx = int(del_ann.split(".")[0]) - 1
+                if st.button("🗑  Delete this announcement"):
+                    st.session_state.announcements.pop(idx)
+                    st.success("Removed.")
+                    st.rerun()
+
+    # ══════════════════════════════════════════════════════════════
+    # FEEDBACK / REMARKS — teacher-only write; shows to all
+    # ══════════════════════════════════════════════════════════════
+    elif selected == "Feedback":
+        t = st.session_state.teacher
+        header("STUDENT FEEDBACK", "Teacher remarks & progress notes", "PUBLIC")
+
+        G("""<div style="border-radius:12px;overflow:hidden;margin-bottom:1rem;">
+            <img src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=1200&q=80"
+                 style="width:100%;height:100px;object-fit:cover;display:block;filter:brightness(0.28);">
+        </div>""")
+
+        students = st.session_state.students
+
+        if t:
+            with st.expander("✏️  Add Remark for a Student", expanded=False):
+                with st.form("remark_form"):
+                    r_student = st.selectbox("Student", [s["Name"] for s in students])
+                    r_subject = st.selectbox("Subject", t.get("subjects", ["General"]))
+                    r_type    = st.selectbox("Type", ["Academic", "Behaviour", "Attendance", "Achievement", "Improvement Needed"])
+                    r_text    = st.text_area("Remark *", placeholder="e.g. Excellent progress in algebra this term…")
+                    if st.form_submit_button("Submit Remark"):
+                        if not r_text.strip():
+                            st.error("Remark cannot be empty.")
+                        else:
+                            rems = st.session_state.remarks
+                            if r_student not in rems: rems[r_student] = []
+                            rems[r_student].insert(0, {
+                                "teacher": t["name"], "subject": r_subject,
+                                "type": r_type, "text": r_text.strip(),
+                                "date": datetime.now().strftime("%d %b %Y")
+                            })
+                            st.success(f"✅ Remark added for {r_student}.")
+                            st.rerun()
+
+        TYPE_COLORS = {
+            "Academic":"#3b82f6","Behaviour":"#f59e0b","Attendance":"#ef4444",
+            "Achievement":"#22c55e","Improvement Needed":"#f97316"
+        }
+
+        # View by student
+        sec("View Remarks by Student")
+        view_s = st.selectbox("Select Student", ["All"] + [s["Name"] for s in students], key="fb_sel")
+
+        display_list = []
+        if view_s == "All":
+            for sname, rlist in st.session_state.remarks.items():
+                for r in rlist:
+                    display_list.append((sname, r))
+        else:
+            for r in st.session_state.remarks.get(view_s, []):
+                display_list.append((view_s, r))
+
+        if not display_list:
+            st.info("No remarks recorded yet.")
+        else:
+            for sname, r in display_list:
+                tc = TYPE_COLORS.get(r["type"], "#888")
+                sc = SUBJ_COLOR.get(r["subject"], "#888")
+                stu = next((s for s in students if s["Name"] == sname), {})
+                G(f"""
+                <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-left:3px solid {tc};
+                            border-radius:12px;padding:1rem 1.3rem;margin-bottom:0.7rem;">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                        <img src="{stu.get('img','')}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid #333;">
+                        <div>
+                            <span style="font-weight:600;font-size:0.88rem;color:#e8e8e8;">{sname}</span>
+                            <span style="font-size:0.72rem;color:#555;margin-left:8px;">{stu.get('Class','—')}</span>
+                        </div>
+                        <div style="margin-left:auto;display:flex;gap:6px;">
+                            <span style="background:{sc}20;color:{sc};border:1px solid {sc}40;border-radius:20px;padding:2px 8px;font-size:0.68rem;font-weight:600;">{r['subject']}</span>
+                            <span style="background:{tc}20;color:{tc};border:1px solid {tc}40;border-radius:20px;padding:2px 8px;font-size:0.68rem;font-weight:600;">{r['type']}</span>
+                        </div>
+                    </div>
+                    <div style="font-size:0.86rem;color:#bbb;line-height:1.7;margin-bottom:6px;">"{r['text']}"</div>
+                    <div style="font-size:0.72rem;color:#444;">— {r['teacher']} · {r['date']}</div>
+                </div>
+                """)
+
+    # ══════════════════════════════════════════════════════════════
+    # LEADERBOARD — public
+    # ══════════════════════════════════════════════════════════════
+    elif selected == "Leaderboard":
+        header("LEADERBOARD", "Top performers & class rankings", "PUBLIC")
+
+        G("""<div style="border-radius:12px;overflow:hidden;margin-bottom:1rem;">
+            <img src="https://images.unsplash.com/photo-1546519638-68e109498ffc?w=1200&q=80"
+                 style="width:100%;height:110px;object-fit:cover;display:block;filter:brightness(0.28);">
+        </div>""")
+
+        students = st.session_state.students
+        if not students:
+            st.info("No students enrolled yet.")
+        else:
+            lb_mode = st.selectbox("Rank by", ["Overall Score", "Attendance", "Combined (Score + Attendance)"])
+
+            def combined_score(s):
+                att = int(s["Attendance"].replace("%",""))
+                return round(s["Score"] * 0.6 + att * 0.4)
+
+            if lb_mode == "Overall Score":
+                ranked = sorted(students, key=lambda s: s["Score"], reverse=True)
+                key_fn = lambda s: s["Score"]
+                label  = "Score"
+            elif lb_mode == "Attendance":
+                ranked = sorted(students, key=lambda s: int(s["Attendance"].replace("%","")), reverse=True)
+                key_fn = lambda s: int(s["Attendance"].replace("%",""))
+                label  = "Attendance %"
+            else:
+                ranked = sorted(students, key=combined_score, reverse=True)
+                key_fn = combined_score
+                label  = "Combined"
+
+            medals = ["🥇","🥈","🥉"]
+            RANK_COLORS = ["#f59e0b","#9ca3af","#cd7c2f"]
+
+            # Top 3 podium
+            sec("Top Performers")
+            if len(ranked) >= 3:
+                p1, p2, p3 = ranked[0], ranked[1], ranked[2]
+                pod_cols = st.columns(3)
+                for ci, (s, medal, rc) in enumerate(zip([p1,p2,p3], medals, RANK_COLORS)):
+                    val = key_fn(s)
+                    with pod_cols[ci]:
+                        G(f"""
+                        <div style="background:#1a1a1a;border:1px solid {rc}40;border-top:3px solid {rc};
+                                    border-radius:12px;padding:1.5rem 1rem;text-align:center;margin-bottom:0.5rem;">
+                            <div style="font-size:2rem;margin-bottom:8px;">{medal}</div>
+                            <img src="{s.get('img','')}" style="width:50px;height:50px;border-radius:50%;object-fit:cover;border:2px solid {rc};margin-bottom:8px;">
+                            <div style="font-weight:700;font-size:0.9rem;color:#e8e8e8;margin-bottom:2px;">{s['Name'].split()[0]}</div>
+                            <div style="font-size:0.72rem;color:#555;margin-bottom:8px;">{s.get('Class','—')}</div>
+                            <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:{rc};line-height:1;">{val}{'%' if label=='Attendance %' else ''}</div>
+                            <div style="font-size:0.65rem;color:#444;letter-spacing:1px;text-transform:uppercase;">{label}</div>
+                        </div>
+                        """)
+
+            # Full ranking list
+            sec(f"Full Rankings — {label}")
+            for rank, s in enumerate(ranked, 1):
+                val       = key_fn(s)
+                bar_w     = val if label != "Attendance %" else val
+                bar_color = "#22c55e" if rank <= 3 else "#3b82f6" if rank <= len(ranked)//2 else "#555"
+                medal_str = medals[rank-1] if rank <= 3 else f"#{rank}"
+                G(f"""
+                <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;
+                            padding:0.8rem 1.2rem;margin-bottom:0.5rem;display:flex;align-items:center;gap:12px;">
+                    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:#444;
+                                width:36px;text-align:center;flex-shrink:0;">{medal_str}</div>
+                    <img src="{s.get('img','')}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid #333;flex-shrink:0;">
+                    <div style="flex:1;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                            <span style="font-weight:600;font-size:0.88rem;color:#e8e8e8;">{s['Name']}</span>
+                            <span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:{bar_color};">{val}{'%' if label=='Attendance %' else ''}</span>
+                        </div>
+                        <div style="background:#222;border-radius:3px;height:3px;">
+                            <div style="width:{min(val,100)}%;background:{bar_color};height:3px;border-radius:3px;"></div>
+                        </div>
+                    </div>
+                </div>
+                """)
+
+            # Achievement badges
+            sec("Achievements")
+            badge_grid = ""
+            for s in students:
+                badges = []
+                if s["Score"] >= 90: badges.append(("🌟","Scholar"))
+                if s["Score"] >= 80: badges.append(("📚","High Achiever"))
+                if int(s["Attendance"].replace("%","")) >= 95: badges.append(("✅","Perfect Attendance"))
+                if int(s["Attendance"].replace("%","")) < 75: badges.append(("⚠️","Low Attendance"))
+                if combined_score(s) >= 85: badges.append(("🏆","All-Rounder"))
+                if badges:
+                    badge_html = " ".join(f'<span style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:20px;padding:2px 10px;font-size:0.72rem;color:#aaa;">{b[0]} {b[1]}</span>' for b in badges)
+                    badge_grid += f'<div style="margin-bottom:0.5rem;"><span style="font-size:0.82rem;color:#ddd;font-weight:600;">{s["Name"]}</span> <span style="font-size:0.72rem;color:#444;">{s.get("Class","—")}</span><br>{badge_html}</div>'
+            if badge_grid:
+                G(f'<div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:1.2rem 1.4rem;">{badge_grid}</div>')
