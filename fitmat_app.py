@@ -1,802 +1,580 @@
 import streamlit as st
 from datetime import datetime
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
 import random
 
-# ── CONFIG ─────────────────────────────────────────
 st.set_page_config(
-    page_title="Fitmat Coaching Classes",
-    page_icon="🎓",
+    page_title="Fitmat Class Portal",
+    page_icon="🏫",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# ── CUSTOM CSS ─────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap');
 
-/* ── ROOT PALETTE ── */
 :root {
-    --bg:        #0f1117;
-    --surface:   #181c27;
-    --card:      #1e2336;
-    --border:    #2a2f45;
-    --accent:    #f5a623;
-    --accent2:   #e86c3a;
-    --text:      #e8eaf2;
-    --muted:     #7a7f9a;
-    --green:     #3ecf8e;
-    --red:       #e85d75;
-    --blue:      #4f8ef7;
+    --bg:      #0d0d0d;
+    --surface: #141414;
+    --card:    #1a1a1a;
+    --border:  #2a2a2a;
+    --green:   #22c55e;
+    --green2:  #16a34a;
+    --green3:  rgba(34,197,94,0.12);
+    --text:    #e8e8e8;
+    --muted:   #666;
+    --muted2:  #888;
 }
 
-/* ── GLOBAL ── */
 html, body, [class*="css"] {
-    font-family: 'DM Sans', sans-serif;
-    background-color: var(--bg) !important;
+    font-family: 'DM Sans', sans-serif !important;
+    background: var(--bg) !important;
     color: var(--text) !important;
 }
+#MainMenu, footer, header { visibility: hidden; }
+.block-container { padding: 0 !important; max-width: 100% !important; }
 
-/* ── HIDE STREAMLIT CHROME ── */
-#MainMenu, footer, header {visibility: hidden;}
-.block-container { padding: 2rem 2.5rem !important; }
-
-/* ── SIDEBAR ── */
 [data-testid="stSidebar"] {
     background: var(--surface) !important;
     border-right: 1px solid var(--border) !important;
+    min-width: 210px !important; max-width: 210px !important;
 }
+[data-testid="stSidebar"] > div { padding: 0 !important; }
 [data-testid="stSidebar"] * { color: var(--text) !important; }
-
-/* ── SIDEBAR RADIO ── */
+[data-testid="stSidebar"] .stRadio > div { gap: 0 !important; }
 [data-testid="stSidebar"] .stRadio label {
-    padding: 10px 14px !important;
-    border-radius: 10px !important;
-    margin-bottom: 4px !important;
-    display: block !important;
-    transition: background 0.2s !important;
-    font-size: 0.9rem !important;
-    cursor: pointer !important;
+    display: block !important; padding: 13px 20px !important;
+    margin: 0 !important; border-radius: 0 !important;
+    font-size: 0.88rem !important; cursor: pointer !important;
+    border-left: 3px solid transparent !important; color: #888 !important;
+    transition: all 0.15s !important;
 }
 [data-testid="stSidebar"] .stRadio label:hover {
-    background: var(--card) !important;
+    background: var(--green3) !important; color: var(--green) !important;
+    border-left-color: var(--green) !important;
 }
+[data-testid="stSidebar"] .stRadio [data-baseweb="radio"] > div:first-child { display: none !important; }
 
-/* ── METRIC CARDS ── */
-[data-testid="metric-container"] {
-    background: var(--card) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 16px !important;
-    padding: 1.25rem !important;
-}
-[data-testid="metric-container"] label { color: var(--muted) !important; font-size: 0.8rem !important; }
-[data-testid="metric-container"] [data-testid="stMetricValue"] {
-    font-family: 'Playfair Display', serif !important;
-    font-size: 2rem !important;
-    color: var(--accent) !important;
-}
-
-/* ── BUTTONS ── */
 .stButton > button {
-    background: linear-gradient(135deg, var(--accent), var(--accent2)) !important;
-    color: #0f1117 !important;
-    font-weight: 600 !important;
-    border: none !important;
-    border-radius: 10px !important;
-    padding: 0.5rem 1.4rem !important;
-    transition: transform 0.15s, box-shadow 0.15s !important;
+    background: var(--green) !important; color: #000 !important;
+    border: none !important; border-radius: 8px !important;
+    font-weight: 600 !important; font-size: 0.88rem !important;
+    padding: 0.55rem 1.5rem !important; transition: all 0.15s !important;
 }
-.stButton > button:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 6px 20px rgba(245,166,35,0.35) !important;
-}
+.stButton > button:hover { background: var(--green2) !important; }
 
-/* ── INPUTS ── */
 .stTextInput > div > div > input,
 .stSelectbox > div > div,
-.stTextArea > div > div > textarea {
-    background: var(--card) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 10px !important;
-    color: var(--text) !important;
+.stTextArea textarea,
+.stDateInput input {
+    background: var(--card) !important; border: 1px solid var(--border) !important;
+    border-radius: 8px !important; color: var(--text) !important;
+    font-family: 'DM Sans', sans-serif !important;
 }
 .stTextInput > div > div > input:focus {
-    border-color: var(--accent) !important;
-    box-shadow: 0 0 0 2px rgba(245,166,35,0.2) !important;
+    border-color: var(--green) !important;
+    box-shadow: 0 0 0 2px rgba(34,197,94,0.2) !important;
 }
 
-/* ── DATAFRAME ── */
-[data-testid="stDataFrame"] { border-radius: 12px !important; overflow: hidden !important; }
-
-/* ── EXPANDER ── */
-.streamlit-expanderHeader {
-    background: var(--card) !important;
-    border-radius: 10px !important;
-    border: 1px solid var(--border) !important;
+[data-testid="stDataFrame"] {
+    border-radius: 12px !important; border: 1px solid var(--border) !important;
 }
 
-/* ── TABS ── */
-.stTabs [data-baseweb="tab-list"] {
-    background: var(--card) !important;
-    border-radius: 12px !important;
-    padding: 4px !important;
-    gap: 4px !important;
+[data-testid="metric-container"] {
+    background: var(--card) !important; border: 1px solid var(--green) !important;
+    border-radius: 12px !important; padding: 1.2rem !important;
 }
-.stTabs [data-baseweb="tab"] {
-    border-radius: 8px !important;
-    color: var(--muted) !important;
-    font-weight: 500 !important;
+[data-testid="metric-container"] label {
+    font-size: 0.72rem !important; color: var(--muted2) !important;
+    text-transform: uppercase !important; letter-spacing: 1px !important;
 }
-.stTabs [aria-selected="true"] {
-    background: linear-gradient(135deg, var(--accent), var(--accent2)) !important;
-    color: #0f1117 !important;
+[data-testid="metric-container"] [data-testid="stMetricValue"] {
+    font-family: 'Bebas Neue', sans-serif !important;
+    font-size: 2.4rem !important; color: var(--green) !important; line-height: 1 !important;
 }
 
-/* ── DOWNLOAD BUTTON ── */
 .stDownloadButton > button {
-    background: var(--card) !important;
-    color: var(--accent) !important;
-    border: 1px solid var(--accent) !important;
-    border-radius: 8px !important;
-    font-size: 0.8rem !important;
+    background: transparent !important; color: var(--green) !important;
+    border: 1px solid var(--green) !important; border-radius: 8px !important;
+    font-size: 0.82rem !important;
 }
 
-/* ── HERO CARD ── */
-.hero-card {
-    background: linear-gradient(135deg, #1a2340 0%, #252d4a 60%, #1e2a50 100%);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 2rem 2.5rem;
-    margin-bottom: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
+/* image styles */
+.hero-img {
+    width: 100%; height: 200px; object-fit: cover;
+    border-radius: 12px; border: 1px solid #2a2a2a;
+    display: block;
 }
-.hero-avatar {
-    width: 64px; height: 64px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.8rem; font-weight: 700;
-    color: #0f1117; flex-shrink: 0;
+.card-img {
+    width: 100%; height: 140px; object-fit: cover;
+    border-radius: 10px 10px 0 0; display: block;
 }
-.hero-text h1 {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.8rem;
-    margin: 0 0 4px 0;
-    color: var(--text);
+.teacher-img {
+    width: 56px; height: 56px; border-radius: 50%;
+    object-fit: cover; border: 2px solid #22c55e; flex-shrink: 0;
 }
-.hero-text p { margin: 0; color: var(--muted); font-size: 0.9rem; }
-.role-badge {
-    display: inline-block;
-    padding: 3px 12px;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    margin-top: 6px;
-    letter-spacing: 0.5px;
+.note-img {
+    width: 100%; height: 110px; object-fit: cover;
+    border-radius: 8px; margin-bottom: 10px; display: block;
 }
-.badge-admin   { background: rgba(245,166,35,0.15); color: var(--accent); border: 1px solid rgba(245,166,35,0.3); }
-.badge-teacher { background: rgba(79,142,247,0.15); color: var(--blue);   border: 1px solid rgba(79,142,247,0.3); }
-.badge-student { background: rgba(62,207,142,0.15); color: var(--green);  border: 1px solid rgba(62,207,142,0.3); }
-
-/* ── INFO CARD ── */
-.info-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 1.25rem 1.5rem;
-    margin-bottom: 1rem;
-}
-.info-card h4 { margin: 0 0 0.5rem 0; font-size: 0.85rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
-
-/* ── NOTICE BANNER ── */
-.notice {
-    background: rgba(245,166,35,0.08);
-    border-left: 4px solid var(--accent);
-    border-radius: 0 10px 10px 0;
-    padding: 0.75rem 1rem;
-    margin-bottom: 1rem;
-    font-size: 0.9rem;
-}
-
-/* ── SECTION TITLE ── */
-.section-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.4rem;
-    margin-bottom: 1rem;
-    color: var(--text);
-}
-
-/* ── LOGIN PAGE ── */
-.login-wrap {
-    max-width: 420px;
-    margin: 4rem auto;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 24px;
-    padding: 3rem 2.5rem;
-    box-shadow: 0 24px 80px rgba(0,0,0,0.5);
-}
-.login-logo {
-    font-family: 'Playfair Display', serif;
-    font-size: 2rem;
-    font-weight: 700;
-    text-align: center;
-    margin-bottom: 0.25rem;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-.login-sub { text-align: center; color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; }
 </style>
 """, unsafe_allow_html=True)
 
-# ── USERS ──────────────────────────────────────────
-USERS = {
-    "admin": {
-        "password": "admin123",
-        "role": "Admin",
-        "name": "Admin",
-        "subjects": [],
-        "email": "admin@fitmat.edu"
-    },
+# ── DATA ──────────────────────────────────────────
+TEACHERS = {
     "teacher1": {
         "password": "teach123",
-        "role": "Teacher",
         "name": "Mrs. Priya Sharma",
-        "subjects": ["Math", "Science"],
-        "email": "priya@fitmat.edu"
+        "subjects": ["Math","Science"],
+        "img": "https://images.unsplash.com/photo-1607990281513-2c110a25bd8c?w=200&q=80"
     },
     "teacher2": {
         "password": "teach456",
-        "role": "Teacher",
         "name": "Mr. Arjun Mehta",
-        "subjects": ["English", "History"],
-        "email": "arjun@fitmat.edu"
-    },
-    "student1": {
-        "password": "1234",
-        "role": "Student",
-        "name": "Rahul Patil",
-        "class": "10-A",
-        "email": "rahul@student.fitmat.edu"
-    },
-    "student2": {
-        "password": "5678",
-        "role": "Student",
-        "name": "Sneha Kulkarni",
-        "class": "10-A",
-        "email": "sneha@student.fitmat.edu"
+        "subjects": ["English","History"],
+        "img": "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=200&q=80"
     },
 }
 
-# ── SESSION STATE ──────────────────────────────────
-for k, v in {"logged_in": False, "user": None}.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
-
-# ── SAMPLE DATA ───────────────────────────────────
 NOTES = [
-    ("Algebra Basics",     "Math",    "Chapter 1–3: Linear equations and polynomials"),
-    ("Trigonometry",       "Math",    "Chapter 4–5: Sine, cosine, and unit circle"),
-    ("Newton's Laws",      "Science", "Chapter 2: Force, mass, acceleration"),
-    ("Cell Biology",       "Science", "Chapter 7: Cell structure and function"),
-    ("Grammar Essentials", "English", "Parts of speech and sentence formation"),
+    ("Algebra Basics",     "Math",    "Chapter 1–3: Linear equations",
+     "https://images.unsplash.com/photo-1509228468518-180dd4864904?w=400&q=80"),
+    ("Trigonometry",       "Math",    "Chapter 4–5: Sine, cosine, unit circle",
+     "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&q=80"),
+    ("Newton's Laws",      "Science", "Chapter 2: Force, mass, acceleration",
+     "https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?w=400&q=80"),
+    ("Cell Biology",       "Science", "Chapter 7: Cell structure and function",
+     "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&q=80"),
+    ("Grammar Essentials", "English", "Parts of speech and sentence formation",
+     "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&q=80"),
+    ("Modern History",     "History", "Chapter 3: World War II overview",
+     "https://images.unsplash.com/photo-1461360228754-6e81c478b882?w=400&q=80"),
 ]
 
-STUDENTS_DATA = [
-    {"Name": "Rahul Patil",     "Class": "10-A", "Attendance": "92%", "Avg Score": 82},
-    {"Name": "Sneha Kulkarni",  "Class": "10-A", "Attendance": "88%", "Avg Score": 79},
-    {"Name": "Aditya Joshi",    "Class": "10-B", "Attendance": "95%", "Avg Score": 91},
-    {"Name": "Meera Nair",      "Class": "10-B", "Attendance": "70%", "Avg Score": 65},
-    {"Name": "Ravi Deshmukh",   "Class": "10-A", "Attendance": "85%", "Avg Score": 74},
+STUDENTS = [
+    {"Name":"Rahul Patil",    "Class":"10-A","Attendance":"92%","Score":82,
+     "img":"https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&q=80"},
+    {"Name":"Sneha Kulkarni", "Class":"10-A","Attendance":"88%","Score":79,
+     "img":"https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=80"},
+    {"Name":"Aditya Joshi",   "Class":"10-B","Attendance":"95%","Score":91,
+     "img":"https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&q=80"},
+    {"Name":"Meera Nair",     "Class":"10-B","Attendance":"70%","Score":65,
+     "img":"https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&q=80"},
+    {"Name":"Ravi Deshmukh",  "Class":"10-A","Attendance":"85%","Score":74,
+     "img":"https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80"},
 ]
 
-TIMETABLE = {
-    "Monday":    [("8:00",  "Math",    "Mrs. Priya Sharma"),  ("10:00", "Science",  "Mrs. Priya Sharma"),  ("12:00", "English", "Mr. Arjun Mehta")],
-    "Tuesday":   [("8:00",  "History", "Mr. Arjun Mehta"),    ("10:00", "Math",     "Mrs. Priya Sharma"),  ("12:00", "Science", "Mrs. Priya Sharma")],
-    "Wednesday": [("8:00",  "English", "Mr. Arjun Mehta"),    ("10:00", "History",  "Mr. Arjun Mehta"),    ("12:00", "Math",    "Mrs. Priya Sharma")],
-    "Thursday":  [("8:00",  "Science", "Mrs. Priya Sharma"),  ("10:00", "English",  "Mr. Arjun Mehta"),    ("12:00", "History", "Mr. Arjun Mehta")],
-    "Friday":    [("8:00",  "Math",    "Mrs. Priya Sharma"),  ("10:00", "English",  "Mr. Arjun Mehta"),    ("12:00", "Science", "Mrs. Priya Sharma")],
-}
+SUBJ_COLOR = {"Math":"#22c55e","Science":"#3b82f6","English":"#f59e0b","History":"#ef4444"}
 
-def get_attendance():
-    dates = pd.date_range(end=datetime.today(), periods=14)
-    random.seed(42)
-    return pd.DataFrame({
-        "Date":   [d.strftime("%d %b %Y") for d in dates],
-        "Status": [random.choice(["✅ Present", "✅ Present", "✅ Present", "❌ Absent"]) for _ in dates]
-    })
-
-def get_performance():
-    return {
-        "tests":    [60, 68, 74, 78, 82, 85, 88],
-        "labels":   ["Test 1","Test 2","Test 3","Test 4","Test 5","Test 6","Test 7"],
-        "subjects": {"Math": 85, "Science": 78, "English": 82, "History": 74},
-    }
-
-def role_badge(role):
-    cls = {"Admin": "badge-admin", "Teacher": "badge-teacher", "Student": "badge-student"}.get(role, "badge-student")
-    return f'<span class="role-badge {cls}">{role.upper()}</span>'
-
-# ── PLOTLY THEME ──────────────────────────────────
-PLOT_LAYOUT = dict(
-    paper_bgcolor="rgba(0,0,0,0)",
-    plot_bgcolor="rgba(0,0,0,0)",
-    font=dict(color="#e8eaf2", family="DM Sans"),
-    margin=dict(l=20, r=20, t=40, b=20),
-    xaxis=dict(gridcolor="#2a2f45", linecolor="#2a2f45"),
-    yaxis=dict(gridcolor="#2a2f45", linecolor="#2a2f45"),
+PLOT = dict(
+    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+    font=dict(color="#888", family="DM Sans"), margin=dict(l=10,r=10,t=36,b=10),
+    xaxis=dict(gridcolor="#222", linecolor="#333", tickfont=dict(size=11,color="#666")),
+    yaxis=dict(gridcolor="#222", linecolor="#333", tickfont=dict(size=11,color="#666")),
 )
 
-# ══════════════════════════════════════════════════
-# LOGIN
-# ══════════════════════════════════════════════════
-def login():
-    st.markdown('<div class="login-wrap">', unsafe_allow_html=True)
-    st.markdown('<div class="login-logo">🎓 Fitmat</div>', unsafe_allow_html=True)
-    st.markdown('<div class="login-sub">Coaching Classes Portal</div>', unsafe_allow_html=True)
+def att_data():
+    random.seed(7)
+    dates = pd.date_range(end=datetime.today(), periods=14)
+    return pd.DataFrame({
+        "Date":   [d.strftime("%d %b %Y") for d in dates],
+        "Status": [random.choice(["Present","Present","Present","Absent"]) for _ in dates]
+    })
 
-    username = st.text_input("Username", placeholder="Enter your username")
-    password = st.text_input("Password", type="password", placeholder="Enter your password")
+# ── SESSION ───────────────────────────────────────
+if "teacher" not in st.session_state: st.session_state.teacher = None
 
-    if st.button("Sign In →", use_container_width=True):
-        if username in USERS and USERS[username]["password"] == password:
-            st.session_state.logged_in = True
-            st.session_state.user = {**USERS[username], "username": username}
-            st.rerun()
-        else:
-            st.error("Invalid username or password. Please try again.")
+# ── SIDEBAR ───────────────────────────────────────
+t = st.session_state.teacher
+st.sidebar.markdown("""
+<div style="padding:1.8rem 1.2rem 1rem;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#22c55e;letter-spacing:2px;line-height:1;">FITMAT</div>
+    <div style="font-size:0.65rem;color:#555;letter-spacing:2px;text-transform:uppercase;margin-top:2px;">Class Portal</div>
+</div>
+<div style="border-top:1px solid #222;margin-bottom:0.5rem;"></div>
+""", unsafe_allow_html=True)
 
-    st.markdown("---")
-    with st.expander("ℹ️ Demo Credentials"):
-        st.markdown("""
-| Role | Username | Password |
-|---|---|---|
-| Admin | `admin` | `admin123` |
-| Teacher | `teacher1` | `teach123` |
-| Teacher | `teacher2` | `teach456` |
-| Student | `student1` | `1234` |
-""")
-    st.markdown("</div>", unsafe_allow_html=True)
+if t:
+    st.sidebar.markdown(f"""
+    <div style="display:flex;align-items:center;gap:10px;padding:0.6rem 1.2rem 0.8rem;">
+        <img src="{t['img']}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid #22c55e;flex-shrink:0;">
+        <div>
+            <div style="font-size:0.78rem;font-weight:500;color:#ddd;">{t['name'].split()[-1]}</div>
+            <div style="font-size:0.65rem;color:#22c55e;">● Active</div>
+        </div>
+    </div>
+    <div style="border-top:1px solid #222;margin-bottom:0.3rem;"></div>
+    """, unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════════
-# SHARED HERO
-# ══════════════════════════════════════════════════
-def hero():
-    u = st.session_state.user
-    initial = u["name"][0].upper()
-    badge = role_badge(u["role"])
-    now = datetime.now().strftime("%A, %d %B %Y")
+pages = ["About Us","Teacher Login","Attendance","Notes","Students"]
+icons = ["🏫","👩‍🏫","📋","📝","🎒"]
+menu  = st.sidebar.radio("", [f"{icons[i]}  {p}" for i,p in enumerate(pages)], label_visibility="collapsed")
+selected = menu.split("  ",1)[1]
+
+if t:
+    st.sidebar.markdown("<div style='border-top:1px solid #222;margin:0.5rem 0;'></div>", unsafe_allow_html=True)
+    if st.sidebar.button("Sign out", use_container_width=True):
+        st.session_state.teacher = None
+        st.rerun()
+
+# ── HELPERS ───────────────────────────────────────
+def header(title, subtitle="", badge=None):
+    badge_html = f'<div style="background:rgba(34,197,94,0.12);border:1px solid #22c55e;border-radius:20px;padding:5px 14px;font-size:0.78rem;font-weight:500;color:#22c55e;white-space:nowrap;">● {badge}</div>' if badge else ""
     st.markdown(f"""
-    <div class="hero-card">
-        <div class="hero-avatar">{initial}</div>
-        <div class="hero-text">
-            <h1>Welcome back, {u['name'].split()[0]}!</h1>
-            <p>{now}</p>
-            {badge}
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;
+                padding-bottom:1.2rem;margin-bottom:1.5rem;border-bottom:1px solid #222;">
+        <div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:2.4rem;
+                        color:#e8e8e8;letter-spacing:1px;line-height:1;">{title}</div>
+            <div style="font-size:0.82rem;color:#666;margin-top:4px;">{subtitle}</div>
+        </div>
+        {badge_html}
+    </div>
+    """, unsafe_allow_html=True)
+
+def lock_gate(section):
+    st.markdown(f"""
+    <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:14px;
+                padding:3rem 2rem;text-align:center;max-width:400px;">
+        <div style="font-size:2.5rem;margin-bottom:1rem;">🔒</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:#e8e8e8;
+                    letter-spacing:1px;margin-bottom:0.5rem;">Teacher Login Required</div>
+        <div style="font-size:0.85rem;color:#666;line-height:1.6;">
+            Sign in via <b style="color:#22c55e;">Teacher Login</b> to access {section}.
         </div>
     </div>
     """, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════
-# STUDENT DASHBOARD
-# ══════════════════════════════════════════════════
-def student_dashboard():
-    u = st.session_state.user
-    menu_items = ["🏠 Dashboard", "📅 Timetable", "📄 Study Material", "📈 Performance"]
-    menu = st.sidebar.radio("Navigation", menu_items, label_visibility="collapsed")
+st.markdown('<div style="padding:2rem 2.5rem;min-height:100vh;">', unsafe_allow_html=True)
 
-    hero()
+# ── ABOUT US ──────────────────────────────────────
+if selected == "About Us":
+    header("ABOUT US", "Welcome to Fitmat Coaching Classes", "ACTIVE")
 
-    if "Dashboard" in menu:
-        st.markdown('<div class="section-title">📊 Your Overview</div>', unsafe_allow_html=True)
-        st.markdown('<div class="notice">📢 <b>Notice:</b> Unit Test 3 scheduled for next Monday. Check study material for revision notes.</div>', unsafe_allow_html=True)
+    # Hero banner image
+    st.markdown("""
+    <div style="position:relative;margin-bottom:1.5rem;border-radius:14px;overflow:hidden;">
+        <img src="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1200&q=80"
+             style="width:100%;height:220px;object-fit:cover;display:block;filter:brightness(0.45);">
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;
+                    justify-content:center;padding:0 2.5rem;">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:2.6rem;
+                        color:#22c55e;letter-spacing:2px;line-height:1;">SHAPING BRIGHT FUTURES</div>
+            <div style="font-size:0.95rem;color:#ccc;margin-top:6px;max-width:500px;">
+                Academic excellence meets physical discipline — since 2010.
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Attendance",    "92%",   "↑ 2% this month")
-        c2.metric("Average Score", "82",    "↑ 4 pts")
-        c3.metric("Tests Taken",   "7",     "1 upcoming")
-        c4.metric("Rank in Class", "#3",    "↑ 2 places")
-
-        st.markdown("---")
-        col1, col2 = st.columns([3, 2])
-
-        with col1:
-            st.markdown('<div class="section-title">📈 Recent Performance</div>', unsafe_allow_html=True)
-            data = get_performance()
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=data["labels"], y=data["tests"],
-                mode="lines+markers",
-                line=dict(color="#f5a623", width=3),
-                marker=dict(size=8, color="#e86c3a"),
-                fill="tozeroy",
-                fillcolor="rgba(245,166,35,0.08)"
-            ))
-            fig.update_layout(title="Score Trend", **PLOT_LAYOUT)
-            st.plotly_chart(fig, use_container_width=True)
-
-        with col2:
-            st.markdown('<div class="section-title">📚 Subject Scores</div>', unsafe_allow_html=True)
-            data = get_performance()
-            fig2 = go.Figure(go.Bar(
-                x=list(data["subjects"].values()),
-                y=list(data["subjects"].keys()),
-                orientation="h",
-                marker=dict(
-                    color=list(data["subjects"].values()),
-                    colorscale=[[0, "#e86c3a"], [1, "#f5a623"]],
-                    showscale=False
-                )
-            ))
-            fig2.update_layout(title="By Subject", **PLOT_LAYOUT)
-            st.plotly_chart(fig2, use_container_width=True)
-
-    elif "Timetable" in menu:
-        st.markdown('<div class="section-title">📅 Weekly Timetable</div>', unsafe_allow_html=True)
-        day_cols = st.columns(len(TIMETABLE))
-        for i, (day, slots) in enumerate(TIMETABLE.items()):
-            with day_cols[i]:
-                st.markdown(f'<div class="info-card"><h4>{day}</h4>', unsafe_allow_html=True)
-                for time, subj, teacher in slots:
-                    colors = {"Math": "#f5a623", "Science": "#3ecf8e", "English": "#4f8ef7", "History": "#e85d75"}
-                    c = colors.get(subj, "#7a7f9a")
-                    st.markdown(f"""
-                    <div style="border-left:3px solid {c}; padding:6px 10px; margin:6px 0; border-radius:0 8px 8px 0; background:rgba(255,255,255,0.03);">
-                        <div style="font-size:0.7rem;color:#7a7f9a;">{time}</div>
-                        <div style="font-weight:600;color:{c};">{subj}</div>
-                        <div style="font-size:0.75rem;color:#7a7f9a;">{teacher}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                st.markdown("</div>", unsafe_allow_html=True)
-
-    elif "Study Material" in menu:
-        st.markdown('<div class="section-title">📄 Study Material</div>', unsafe_allow_html=True)
-        search = st.text_input("🔍 Search notes...", placeholder="e.g. Algebra, Newton...")
-        subj_filter = st.selectbox("Filter by subject", ["All", "Math", "Science", "English"])
-
-        notes = NOTES
-        if search:
-            notes = [n for n in notes if search.lower() in n[0].lower() or search.lower() in n[1].lower()]
-        if subj_filter != "All":
-            notes = [n for n in notes if n[1] == subj_filter]
-
-        if not notes:
-            st.info("No notes found matching your search.")
-        else:
-            cols = st.columns(3)
-            colors = {"Math": "#f5a623", "Science": "#3ecf8e", "English": "#4f8ef7", "History": "#e85d75"}
-            for i, (title, subject, desc) in enumerate(notes):
-                c = colors.get(subject, "#7a7f9a")
-                with cols[i % 3]:
-                    st.markdown(f"""
-                    <div class="info-card" style="border-top: 3px solid {c};">
-                        <div style="font-size:0.75rem;font-weight:600;color:{c};text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">{subject}</div>
-                        <div style="font-size:1rem;font-weight:600;margin-bottom:4px;">{title}</div>
-                        <div style="font-size:0.8rem;color:#7a7f9a;margin-bottom:10px;">{desc}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    st.download_button(
-                        f"⬇ Download",
-                        data=f"# {title}\nSubject: {subject}\n\n{desc}\n\n[Full content would appear here]",
-                        file_name=f"{title.replace(' ', '_')}.txt",
-                        key=f"dl_{i}"
-                    )
-
-    elif "Performance" in menu:
-        st.markdown('<div class="section-title">📈 Performance Analysis</div>', unsafe_allow_html=True)
-        tab1, tab2 = st.tabs(["📊 Charts", "📅 Attendance"])
-
-        with tab1:
-            data = get_performance()
-            c1, c2 = st.columns(2)
-            with c1:
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(
-                    x=data["labels"], y=data["tests"],
-                    mode="lines+markers",
-                    line=dict(color="#f5a623", width=3),
-                    marker=dict(size=9, color="#e86c3a"),
-                    fill="tozeroy", fillcolor="rgba(245,166,35,0.07)"
-                ))
-                fig.update_layout(title="Score Progression", **PLOT_LAYOUT)
-                st.plotly_chart(fig, use_container_width=True)
-            with c2:
-                fig2 = go.Figure(go.Bar(
-                    x=list(data["subjects"].keys()),
-                    y=list(data["subjects"].values()),
-                    marker=dict(color=["#f5a623","#3ecf8e","#4f8ef7","#e85d75"])
-                ))
-                fig2.update_layout(title="Subject-wise Scores", **PLOT_LAYOUT)
-                st.plotly_chart(fig2, use_container_width=True)
-
-        with tab2:
-            att = get_attendance()
-            present = sum(1 for s in att["Status"] if "Present" in s)
-            total   = len(att)
-            pct     = int(present / total * 100)
-
-            fig3 = go.Figure(go.Pie(
-                values=[present, total - present],
-                labels=["Present", "Absent"],
-                hole=0.65,
-                marker=dict(colors=["#3ecf8e", "#e85d75"])
-            ))
-            fig3.update_traces(textinfo="none")
-            fig3.update_layout(
-                title=f"Attendance: {pct}%",
-                annotations=[dict(text=f"<b>{pct}%</b>", x=0.5, y=0.5, font_size=20, showarrow=False, font_color="#f5a623")],
-                **PLOT_LAYOUT
-            )
-            c1, c2 = st.columns([1, 2])
-            with c1:
-                st.plotly_chart(fig3, use_container_width=True)
-            with c2:
-                st.dataframe(att, use_container_width=True, hide_index=True)
-
-# ══════════════════════════════════════════════════
-# TEACHER DASHBOARD
-# ══════════════════════════════════════════════════
-def teacher_dashboard():
-    u = st.session_state.user
-    menu_items = ["🏠 Dashboard", "👥 Students", "📅 My Schedule", "📤 Upload Material", "📝 Mark Attendance"]
-    menu = st.sidebar.radio("Navigation", menu_items, label_visibility="collapsed")
-
-    # Teacher info in sidebar
-    st.sidebar.markdown("---")
-    st.sidebar.markdown(f"**Subjects:** {', '.join(u.get('subjects', []))}")
-    st.sidebar.markdown(f"**Email:** {u.get('email','')}")
-
-    hero()
-
-    if "Dashboard" in menu:
-        st.markdown('<div class="section-title">📊 Class Overview</div>', unsafe_allow_html=True)
-        st.markdown('<div class="notice">📢 <b>Reminder:</b> Submit Unit Test 3 marks by Friday.</div>', unsafe_allow_html=True)
-
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Total Students", "38")
-        c2.metric("Avg Attendance", "87%")
-        c3.metric("Avg Class Score", "79")
-        c4.metric("Tests Graded",   "6 / 7")
-
-        st.markdown("---")
-        col1, col2 = st.columns([3, 2])
-        with col1:
-            st.markdown('<div class="section-title">📈 Class Score Trend</div>', unsafe_allow_html=True)
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=["Test 1","Test 2","Test 3","Test 4","Test 5","Test 6"],
-                y=[72, 74, 76, 77, 80, 79],
-                mode="lines+markers",
-                line=dict(color="#4f8ef7", width=3),
-                fill="tozeroy", fillcolor="rgba(79,142,247,0.07)"
-            ))
-            fig.update_layout(title="Class Average per Test", **PLOT_LAYOUT)
-            st.plotly_chart(fig, use_container_width=True)
-
-        with col2:
-            st.markdown('<div class="section-title">🏆 Top Performers</div>', unsafe_allow_html=True)
-            top = sorted(STUDENTS_DATA, key=lambda x: x["Avg Score"], reverse=True)[:3]
-            for rank, s in enumerate(top, 1):
-                medal = ["🥇", "🥈", "🥉"][rank - 1]
-                st.markdown(f"""
-                <div class="info-card" style="padding:0.9rem 1.2rem;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <div>{medal} <b>{s['Name']}</b> <span style="color:#7a7f9a;font-size:0.8rem;">{s['Class']}</span></div>
-                        <div style="color:#f5a623;font-weight:600;">{s['Avg Score']}</div>
-                    </div>
+    # Mission + Vision
+    c1,c2 = st.columns(2)
+    with c1:
+        st.markdown("""
+        <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-top:2px solid #22c55e;border-radius:12px;overflow:hidden;">
+            <img src="https://images.unsplash.com/photo-1509062522246-3755977927d7?w=600&q=80"
+                 style="width:100%;height:130px;object-fit:cover;display:block;filter:brightness(0.5);">
+            <div style="padding:1.2rem 1.4rem;">
+                <div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:#22c55e;letter-spacing:1px;margin-bottom:0.6rem;">OUR MISSION</div>
+                <div style="font-size:0.88rem;color:#aaa;line-height:1.8;">
+                    Fitmat is dedicated to building a thriving, energetic learning environment where every student is
+                    empowered to grow physically and mentally through structured fitness and education.
                 </div>
-                """, unsafe_allow_html=True)
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    with c2:
+        st.markdown("""
+        <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-top:2px solid #22c55e;border-radius:12px;overflow:hidden;">
+            <img src="https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?w=600&q=80"
+                 style="width:100%;height:130px;object-fit:cover;display:block;filter:brightness(0.5);">
+            <div style="padding:1.2rem 1.4rem;">
+                <div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:#22c55e;letter-spacing:1px;margin-bottom:0.6rem;">OUR VISION</div>
+                <div style="font-size:0.88rem;color:#aaa;line-height:1.8;">
+                    To cultivate disciplined, healthy, and well-rounded individuals ready to contribute positively
+                    to society through the power of consistent learning and physical activity.
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-    elif "Students" in menu:
-        st.markdown('<div class="section-title">👥 Student Management</div>', unsafe_allow_html=True)
+    st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
 
-        search = st.text_input("🔍 Search student...", placeholder="Name or class")
-        df = pd.DataFrame(STUDENTS_DATA)
-        if search:
-            df = df[df["Name"].str.contains(search, case=False) | df["Class"].str.contains(search, case=False)]
+    # Who We Are
+    st.markdown("""
+    <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;overflow:hidden;margin-bottom:1rem;">
+        <img src="https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=1200&q=80"
+             style="width:100%;height:180px;object-fit:cover;display:block;filter:brightness(0.4);">
+        <div style="padding:1.8rem 2rem;">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:#e8e8e8;letter-spacing:1px;margin-bottom:0.9rem;">WHO WE ARE</div>
+            <div style="font-size:0.9rem;color:#aaa;line-height:1.9;margin-bottom:0.8rem;">
+                Fitmat is a specialized class designed around holistic student development. We combine academic rigor
+                with physical fitness programs, creating a unique environment where students excel both in the classroom and on the field.
+            </div>
+            <div style="font-size:0.9rem;color:#aaa;line-height:1.9;margin-bottom:1.5rem;">
+                Our approach is student-first. With a team of dedicated educators and coaches, we ensure every learner
+                receives personalized attention, structured routines, and the tools they need to succeed.
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;">
+                <div style="background:#111;border:1px solid #22c55e;border-radius:12px;padding:1.2rem;text-align:center;">
+                    <div style="font-family:'Bebas Neue',sans-serif;font-size:2.2rem;color:#22c55e;line-height:1;">120+</div>
+                    <div style="font-size:0.7rem;color:#666;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;">Students</div>
+                </div>
+                <div style="background:#111;border:1px solid #22c55e;border-radius:12px;padding:1.2rem;text-align:center;">
+                    <div style="font-family:'Bebas Neue',sans-serif;font-size:2.2rem;color:#22c55e;line-height:1;">12</div>
+                    <div style="font-size:0.7rem;color:#666;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;">Teachers</div>
+                </div>
+                <div style="background:#111;border:1px solid #22c55e;border-radius:12px;padding:1.2rem;text-align:center;">
+                    <div style="font-family:'Bebas Neue',sans-serif;font-size:2.2rem;color:#22c55e;line-height:1;">95%</div>
+                    <div style="font-size:0.7rem;color:#666;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;">Attendance Rate</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-        st.dataframe(df, use_container_width=True, hide_index=True)
-
-        st.markdown("---")
-        st.markdown('<div class="section-title">📊 Score Distribution</div>', unsafe_allow_html=True)
-        fig = go.Figure(go.Bar(
-            x=[s["Name"].split()[0] for s in STUDENTS_DATA],
-            y=[s["Avg Score"] for s in STUDENTS_DATA],
-            marker=dict(color=[s["Avg Score"] for s in STUDENTS_DATA],
-                        colorscale=[[0,"#e85d75"],[0.5,"#f5a623"],[1,"#3ecf8e"]],
-                        showscale=False)
-        ))
-        fig.update_layout(title="Student Average Scores", **PLOT_LAYOUT)
-        st.plotly_chart(fig, use_container_width=True)
-
-    elif "Schedule" in menu:
-        st.markdown('<div class="section-title">📅 My Weekly Schedule</div>', unsafe_allow_html=True)
-        my_subjects = u.get("subjects", [])
-        day_cols = st.columns(len(TIMETABLE))
-        colors = {"Math": "#f5a623", "Science": "#3ecf8e", "English": "#4f8ef7", "History": "#e85d75"}
-
-        for i, (day, slots) in enumerate(TIMETABLE.items()):
-            with day_cols[i]:
-                st.markdown(f'<div class="info-card"><h4>{day}</h4>', unsafe_allow_html=True)
-                for time, subj, teacher in slots:
-                    if subj in my_subjects:
-                        c = colors.get(subj, "#7a7f9a")
-                        st.markdown(f"""
-                        <div style="border-left:3px solid {c}; padding:6px 10px; margin:6px 0; border-radius:0 8px 8px 0; background:rgba(255,255,255,0.04);">
-                            <div style="font-size:0.7rem;color:#7a7f9a;">{time}</div>
-                            <div style="font-weight:600;color:{c};">{subj}</div>
-                            <div style="font-size:0.75rem;color:#3ecf8e;">✓ Your class</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    else:
-                        c = colors.get(subj, "#7a7f9a")
-                        st.markdown(f"""
-                        <div style="border-left:3px solid #2a2f45; padding:6px 10px; margin:6px 0; border-radius:0 8px 8px 0; opacity:0.45;">
-                            <div style="font-size:0.7rem;color:#7a7f9a;">{time}</div>
-                            <div style="font-weight:500;color:#7a7f9a;">{subj}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                st.markdown("</div>", unsafe_allow_html=True)
-
-    elif "Upload" in menu:
-        st.markdown('<div class="section-title">📤 Upload Study Material</div>', unsafe_allow_html=True)
-        with st.form("upload_form"):
-            title   = st.text_input("Note Title",   placeholder="e.g. Chapter 5: Quadratic Equations")
-            subject = st.selectbox("Subject", u.get("subjects", ["General"]))
-            desc    = st.text_area("Description / Summary", placeholder="Brief summary of the content...")
-            file    = st.file_uploader("Attach File (PDF / DOCX / Image)", type=["pdf","docx","png","jpg"])
-            submitted = st.form_submit_button("Upload Material")
-            if submitted:
-                if title and subject:
-                    st.success(f"✅ '{title}' uploaded successfully for {subject}!")
-                else:
-                    st.error("Please fill in all required fields.")
-
-    elif "Attendance" in menu:
-        st.markdown('<div class="section-title">📝 Mark Attendance</div>', unsafe_allow_html=True)
-        date_sel = st.date_input("Select Date", value=datetime.today())
-        subject  = st.selectbox("Subject", u.get("subjects", []))
-        st.markdown("---")
-
-        if "attendance_state" not in st.session_state:
-            st.session_state.attendance_state = {s["Name"]: True for s in STUDENTS_DATA}
-
-        for s in STUDENTS_DATA:
-            name = s["Name"]
-            cols = st.columns([4, 1])
-            with cols[0]:
-                st.markdown(f"**{name}** — {s['Class']}")
-            with cols[1]:
-                st.session_state.attendance_state[name] = st.checkbox(
-                    "Present", value=st.session_state.attendance_state[name], key=f"att_{name}"
-                )
-
-        st.markdown("---")
-        if st.button("Save Attendance", use_container_width=True):
-            present_count = sum(1 for v in st.session_state.attendance_state.values() if v)
-            st.success(f"✅ Attendance saved for {date_sel.strftime('%d %b %Y')} — {present_count}/{len(STUDENTS_DATA)} present.")
-
-# ══════════════════════════════════════════════════
-# ADMIN DASHBOARD
-# ══════════════════════════════════════════════════
-def admin_dashboard():
-    menu_items = ["🏠 Dashboard", "👥 All Students", "👩‍🏫 Teachers", "📅 Timetable"]
-    menu = st.sidebar.radio("Navigation", menu_items, label_visibility="collapsed")
-
-    hero()
-
-    if "Dashboard" in menu:
-        st.markdown('<div class="section-title">📊 Institute Overview</div>', unsafe_allow_html=True)
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Total Students", "156")
-        c2.metric("Teachers",       "8")
-        c3.metric("Classes",        "6")
-        c4.metric("Avg Attendance", "89%")
-
-        st.markdown("---")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown('<div class="section-title">📈 Monthly Attendance</div>', unsafe_allow_html=True)
-            fig = go.Figure(go.Bar(
-                x=["Jan","Feb","Mar","Apr","May"],
-                y=[88, 85, 90, 87, 89],
-                marker=dict(color=["#f5a623","#e86c3a","#3ecf8e","#4f8ef7","#f5a623"])
-            ))
-            fig.update_layout(title="Avg Monthly Attendance %", **PLOT_LAYOUT)
-            st.plotly_chart(fig, use_container_width=True)
-
-        with col2:
-            st.markdown('<div class="section-title">📊 Subject Performance</div>', unsafe_allow_html=True)
-            fig2 = go.Figure(go.Bar(
-                x=["Math","Science","English","History"],
-                y=[79, 82, 85, 71],
-                marker=dict(color=["#f5a623","#3ecf8e","#4f8ef7","#e85d75"])
-            ))
-            fig2.update_layout(title="Avg Score by Subject", **PLOT_LAYOUT)
-            st.plotly_chart(fig2, use_container_width=True)
-
-    elif "Students" in menu:
-        st.markdown('<div class="section-title">👥 All Students</div>', unsafe_allow_html=True)
-        df = pd.DataFrame(STUDENTS_DATA)
-        st.dataframe(df, use_container_width=True, hide_index=True)
-
-    elif "Teachers" in menu:
-        st.markdown('<div class="section-title">👩‍🏫 Teacher Directory</div>', unsafe_allow_html=True)
-        teachers = [(k, v) for k, v in USERS.items() if v["role"] == "Teacher"]
-        for uname, t in teachers:
+    # Meet the teachers
+    st.markdown('<div style="font-size:0.72rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:0.8rem;">Meet Our Teachers</div>', unsafe_allow_html=True)
+    tc1,tc2 = st.columns(2)
+    for i,(col,(_,td)) in enumerate(zip([tc1,tc2], TEACHERS.items())):
+        tags = " ".join(f'<span style="background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.3);border-radius:20px;padding:2px 8px;font-size:0.68rem;">{s}</span>' for s in td["subjects"])
+        with col:
             st.markdown(f"""
-            <div class="info-card" style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:1.1rem 1.3rem;
+                        display:flex;align-items:center;gap:14px;">
+                <img src="{td['img']}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid #22c55e;flex-shrink:0;">
                 <div>
-                    <div style="font-weight:600;font-size:1rem;">{t['name']}</div>
-                    <div style="color:#7a7f9a;font-size:0.85rem;">{t['email']}</div>
-                    <div style="margin-top:6px;">
-                        {''.join(f'<span style="background:#4f8ef720;color:#4f8ef7;border:1px solid #4f8ef730;border-radius:20px;padding:2px 10px;font-size:0.75rem;margin-right:6px;">{s}</span>' for s in t['subjects'])}
-                    </div>
+                    <div style="font-weight:600;font-size:0.92rem;color:#e8e8e8;margin-bottom:3px;">{td['name']}</div>
+                    <div>{tags}</div>
                 </div>
-                <div style="color:#3ecf8e;font-size:0.85rem;">● Active</div>
             </div>
             """, unsafe_allow_html=True)
 
-    elif "Timetable" in menu:
-        st.markdown('<div class="section-title">📅 Full Timetable</div>', unsafe_allow_html=True)
-        colors = {"Math": "#f5a623", "Science": "#3ecf8e", "English": "#4f8ef7", "History": "#e85d75"}
-        day_cols = st.columns(len(TIMETABLE))
-        for i, (day, slots) in enumerate(TIMETABLE.items()):
-            with day_cols[i]:
-                st.markdown(f'<div class="info-card"><h4>{day}</h4>', unsafe_allow_html=True)
-                for time, subj, teacher in slots:
-                    c = colors.get(subj, "#7a7f9a")
-                    st.markdown(f"""
-                    <div style="border-left:3px solid {c}; padding:6px 10px; margin:6px 0; border-radius:0 8px 8px 0; background:rgba(255,255,255,0.03);">
-                        <div style="font-size:0.7rem;color:#7a7f9a;">{time}</div>
-                        <div style="font-weight:600;color:{c};">{subj}</div>
-                        <div style="font-size:0.75rem;color:#7a7f9a;">{teacher}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                st.markdown("</div>", unsafe_allow_html=True)
-
-# ══════════════════════════════════════════════════
-# SIDEBAR BRAND
-# ══════════════════════════════════════════════════
-def sidebar_brand():
-    u = st.session_state.user
-    st.sidebar.markdown("""
-    <div style="text-align:center;padding:1.5rem 0 1rem;">
-        <div style="font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;
-                    background:linear-gradient(135deg,#f5a623,#e86c3a);
-                    -webkit-background-clip:text;-webkit-text-fill-color:transparent;">
-            🎓 Fitmat
+# ── TEACHER LOGIN ─────────────────────────────────
+elif selected == "Teacher Login":
+    t = st.session_state.teacher
+    if t:
+        header("TEACHER PANEL", f"Logged in as {t['name']}", "ACTIVE")
+        tags = " ".join(f'<span style="background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.3);border-radius:20px;padding:2px 10px;font-size:0.72rem;">{s}</span>' for s in t.get("subjects",[]))
+        st.markdown(f"""
+        <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-top:2px solid #22c55e;
+                    border-radius:12px;overflow:hidden;max-width:520px;margin-bottom:1.5rem;">
+            <img src="https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=800&q=80"
+                 style="width:100%;height:100px;object-fit:cover;display:block;filter:brightness(0.35);">
+            <div style="padding:1.2rem 1.4rem;display:flex;align-items:center;gap:14px;">
+                <img src="{t['img']}" style="width:54px;height:54px;border-radius:50%;object-fit:cover;border:2px solid #22c55e;flex-shrink:0;margin-top:-28px;">
+                <div>
+                    <div style="font-weight:600;font-size:1rem;color:#e8e8e8;">{t['name']}</div>
+                    <div style="font-size:0.78rem;color:#666;margin-bottom:5px;">Teacher · Fitmat Class Portal</div>
+                    <div>{tags}</div>
+                </div>
+            </div>
         </div>
-        <div style="font-size:0.75rem;color:#7a7f9a;margin-top:2px;">Coaching Classes</div>
-    </div>
-    """, unsafe_allow_html=True)
-    st.sidebar.markdown("---")
-    st.sidebar.markdown(f"**{u['name']}**")
-    st.sidebar.markdown(role_badge(u["role"]), unsafe_allow_html=True)
-    st.sidebar.markdown("---")
+        """, unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════════
-# ROUTER
-# ══════════════════════════════════════════════════
-if st.session_state.logged_in:
-    sidebar_brand()
-    if st.sidebar.button("⏻  Logout", use_container_width=True):
-        st.session_state.logged_in = False
-        st.session_state.user = None
-        st.rerun()
-
-    role = st.session_state.user["role"]
-    if role == "Admin":
-        admin_dashboard()
-    elif role == "Teacher":
-        teacher_dashboard()
+        st.markdown('<div style="font-size:0.72rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:0.8rem;">Upload Study Material</div>', unsafe_allow_html=True)
+        with st.form("upload"):
+            title   = st.text_input("Note Title", placeholder="e.g. Chapter 5: Quadratic Equations")
+            subject = st.selectbox("Subject", t.get("subjects",["General"]))
+            desc    = st.text_area("Description", placeholder="Brief summary…")
+            _f      = st.file_uploader("Attach file", type=["pdf","docx","png","jpg"])
+            if st.form_submit_button("Upload Material"):
+                if title: st.success(f"✅ '{title}' uploaded for {subject}!")
+                else:     st.error("Please enter a title.")
     else:
-        student_dashboard()
-else:
-    login()
+        header("TEACHER LOGIN", "Sign in to access your panel")
+        # login hero
+        st.markdown("""
+        <div style="border-radius:14px;overflow:hidden;margin-bottom:1.5rem;">
+            <img src="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1200&q=80"
+                 style="width:100%;height:160px;object-fit:cover;display:block;filter:brightness(0.35);">
+        </div>
+        """, unsafe_allow_html=True)
+        _, col, _ = st.columns([1,1.2,1])
+        with col:
+            st.markdown('<div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:14px;padding:2rem;">', unsafe_allow_html=True)
+            st.markdown('<div style="font-size:0.72rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:1rem;">Teacher Credentials</div>', unsafe_allow_html=True)
+            username = st.text_input("Username", placeholder="teacher1 or teacher2")
+            password = st.text_input("Password", type="password", placeholder="Enter password")
+            st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+            if st.button("Sign In →", use_container_width=True):
+                if username in TEACHERS and TEACHERS[username]["password"] == password:
+                    st.session_state.teacher = TEACHERS[username]
+                    st.rerun()
+                else:
+                    st.error("Invalid credentials.")
+            st.markdown("</div>", unsafe_allow_html=True)
+            with st.expander("Demo credentials"):
+                st.markdown("| Username | Password |\n|---|---|\n| `teacher1` | `teach123` |\n| `teacher2` | `teach456` |")
+
+# ── ATTENDANCE ────────────────────────────────────
+elif selected == "Attendance":
+    t = st.session_state.teacher
+    header("ATTENDANCE", "Mark daily attendance")
+    if not t:
+        lock_gate("Attendance")
+    else:
+        st.markdown("""
+        <div style="border-radius:12px;overflow:hidden;margin-bottom:1.2rem;">
+            <img src="https://images.unsplash.com/photo-1588072432836-e10032774350?w=1200&q=80"
+                 style="width:100%;height:130px;object-fit:cover;display:block;filter:brightness(0.35);">
+        </div>
+        """, unsafe_allow_html=True)
+
+        c1,c2 = st.columns([1,2])
+        with c1: date_sel = st.date_input("Date", value=datetime.today())
+        with c2: subject  = st.selectbox("Subject", t.get("subjects",[]))
+
+        st.markdown('<div style="font-size:0.72rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#555;margin:1rem 0 0.6rem;">Student List</div>', unsafe_allow_html=True)
+        if "att_state" not in st.session_state:
+            st.session_state.att_state = {s["Name"]: True for s in STUDENTS}
+
+        for s in STUDENTS:
+            name = s["Name"]
+            c1,_,c3 = st.columns([4,1,1])
+            with c1:
+                st.markdown(f"""
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1f1f1f;">
+                    <img src="{s['img']}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid #333;flex-shrink:0;">
+                    <div>
+                        <span style="font-weight:500;color:#ddd;font-size:0.9rem;">{name}</span>
+                        <span style="font-size:0.74rem;color:#555;margin-left:8px;">{s['Class']}</span>
+                    </div>
+                </div>""", unsafe_allow_html=True)
+            with c3:
+                st.session_state.att_state[name] = st.checkbox(
+                    "Present", value=st.session_state.att_state.get(name,True), key=f"att_{name}")
+
+        st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
+        if st.button("Save Attendance"):
+            p = sum(1 for v in st.session_state.att_state.values() if v)
+            st.success(f"✅ Saved for {date_sel.strftime('%d %b %Y')} — {p}/{len(STUDENTS)} present.")
+
+        att = att_data()
+        present = sum(1 for s in att["Status"] if s=="Present")
+        total   = len(att)
+        fig = go.Figure(go.Pie(
+            values=[present,total-present], labels=["Present","Absent"],
+            hole=0.65, marker_colors=["#22c55e","#ef4444"]
+        ))
+        fig.update_traces(textinfo="none")
+        fig.update_layout(height=220,
+            annotations=[dict(text=f"<b>{int(present/total*100)}%</b>",x=0.5,y=0.5,font_size=18,showarrow=False,font_color="#22c55e")],
+            **PLOT)
+        st.plotly_chart(fig, use_container_width=True)
+
+# ── NOTES ─────────────────────────────────────────
+elif selected == "Notes":
+    t = st.session_state.teacher
+    header("NOTES", "Study material library")
+    if not t:
+        lock_gate("Notes")
+    else:
+        st.markdown("""
+        <div style="border-radius:12px;overflow:hidden;margin-bottom:1.2rem;">
+            <img src="https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=1200&q=80"
+                 style="width:100%;height:120px;object-fit:cover;display:block;filter:brightness(0.35);">
+        </div>
+        """, unsafe_allow_html=True)
+
+        search = st.text_input("Search…", placeholder="Algebra, Newton…")
+        subj_f = st.selectbox("Filter", ["My Subjects"] + t.get("subjects",[]) + ["All"])
+        notes  = NOTES
+        if search: notes = [n for n in notes if search.lower() in n[0].lower()]
+        if subj_f == "My Subjects": notes = [n for n in notes if n[1] in t.get("subjects",[])]
+        elif subj_f != "All":       notes = [n for n in notes if n[1]==subj_f]
+
+        if not notes:
+            st.info("No notes found.")
+        else:
+            cols = st.columns(3)
+            for i,(title,subj,desc,img) in enumerate(notes):
+                c    = SUBJ_COLOR.get(subj,"#22c55e")
+                mine = subj in t.get("subjects",[])
+                with cols[i%3]:
+                    st.markdown(f"""
+                    <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-top:2px solid {c if mine else '#2a2a2a'};
+                                border-radius:12px;overflow:hidden;margin-bottom:0.8rem;opacity:{'1' if mine else '0.4'};">
+                        <img src="{img}" style="width:100%;height:110px;object-fit:cover;display:block;filter:brightness(0.55);">
+                        <div style="padding:1rem 1.1rem;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                                <span style="background:rgba(34,197,94,0.1);color:{c};font-size:0.7rem;font-weight:600;
+                                             padding:2px 8px;border-radius:20px;border:1px solid {c}30;">{subj}</span>
+                                {'<span style="font-size:0.7rem;color:#22c55e;font-weight:600;">✓ Yours</span>' if mine else ''}
+                            </div>
+                            <div style="font-size:0.95rem;font-weight:600;color:#e8e8e8;margin-bottom:4px;">{title}</div>
+                            <div style="font-size:0.8rem;color:#666;margin-bottom:10px;">{desc}</div>
+                        </div>
+                    </div>""", unsafe_allow_html=True)
+                    if mine:
+                        st.download_button("⬇ Download", data=f"# {title}\n{desc}",
+                            file_name=f"{title.replace(' ','_')}.txt", key=f"dl_{i}")
+
+# ── STUDENTS ──────────────────────────────────────
+elif selected == "Students":
+    t = st.session_state.teacher
+    header("STUDENTS", "Enrolled students overview")
+    if not t:
+        lock_gate("Students")
+    else:
+        st.markdown("""
+        <div style="border-radius:12px;overflow:hidden;margin-bottom:1.2rem;">
+            <img src="https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?w=1200&q=80"
+                 style="width:100%;height:130px;object-fit:cover;display:block;filter:brightness(0.35);">
+        </div>
+        """, unsafe_allow_html=True)
+
+        c1,c2,c3 = st.columns(3)
+        c1.metric("Total Students","38")
+        c2.metric("Avg Attendance","87%")
+        c3.metric("Avg Score","79")
+
+        st.markdown("<div style='height:1.2rem'></div>", unsafe_allow_html=True)
+        st.markdown('<div style="font-size:0.72rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:0.8rem;">Student Roster</div>', unsafe_allow_html=True)
+
+        for s in STUDENTS:
+            score = s["Score"]
+            bar_color = "#22c55e" if score>=80 else "#f59e0b" if score>=70 else "#ef4444"
+            bar_w = int(score)
+            st.markdown(f"""
+            <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;
+                        padding:1rem 1.3rem;margin-bottom:0.65rem;
+                        display:flex;align-items:center;gap:14px;">
+                <img src="{s['img']}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;
+                           border:2px solid #2a2a2a;flex-shrink:0;">
+                <div style="flex:1;min-width:0;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                        <span style="font-weight:600;font-size:0.92rem;color:#e8e8e8;">{s['Name']}</span>
+                        <span style="font-size:0.78rem;color:#555;">{s['Class']}</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div style="flex:1;background:#222;border-radius:4px;height:5px;">
+                            <div style="width:{bar_w}%;background:{bar_color};height:5px;border-radius:4px;"></div>
+                        </div>
+                        <span style="font-size:0.78rem;color:{bar_color};font-weight:600;flex-shrink:0;">
+                            {score}/100
+                        </span>
+                    </div>
+                    <div style="font-size:0.74rem;color:#555;margin-top:3px;">Attendance: {s['Attendance']}</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
+        st.markdown('<div style="font-size:0.72rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:0.6rem;">Score Chart</div>', unsafe_allow_html=True)
+        fig = go.Figure(go.Bar(
+            x=[s["Name"].split()[0] for s in STUDENTS],
+            y=[s["Score"] for s in STUDENTS],
+            marker=dict(
+                color=[s["Score"] for s in STUDENTS],
+                colorscale=[[0,"#ef4444"],[0.5,"#f59e0b"],[1,"#22c55e"]],
+                showscale=False
+            )
+        ))
+        fig.update_layout(height=240, **PLOT)
+        st.plotly_chart(fig, use_container_width=True)
+
+st.markdown("</div>", unsafe_allow_html=True)
