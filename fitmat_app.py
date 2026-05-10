@@ -443,12 +443,66 @@ with content:
             """)
             sec("Upload Study Material")
             with st.form("upload"):
-                st.text_input("Note Title", placeholder="e.g. Chapter 5: Quadratic Equations")
-                st.selectbox("Subject", t.get("subjects", ["General"]))
-                st.text_area("Description", placeholder="Brief summary…")
-                st.file_uploader("Attach file", type=["pdf", "docx", "png", "jpg"])
-                if st.form_submit_button("Upload Material"):
-                    st.success("✅ Material uploaded successfully!")
+                note_title   = st.text_input("Note Title", placeholder="e.g. Chapter 5: Quadratic Equations")
+                note_subject = st.selectbox("Subject", t.get("subjects", ["General"]))
+                note_desc    = st.text_area("Description", placeholder="Brief summary…")
+                note_file    = st.file_uploader("Attach file (PDF/DOCX/Image)", type=["pdf","docx","png","jpg","jpeg"])
+                submitted    = st.form_submit_button("Upload Material")
+
+            if submitted:
+                if not note_title:
+                    st.error("Please enter a note title.")
+                elif not note_file:
+                    st.error("Please attach a file.")
+                else:
+                    import os
+                    save_dir = "uploaded_notes"
+                    os.makedirs(save_dir, exist_ok=True)
+                    file_path = os.path.join(save_dir, note_file.name)
+                    with open(file_path, "wb") as fh:
+                        fh.write(note_file.getbuffer())
+                    if "uploaded_notes" not in st.session_state:
+                        st.session_state.uploaded_notes = []
+                    st.session_state.uploaded_notes.append({
+                        "title":    note_title,
+                        "subject":  note_subject,
+                        "desc":     note_desc or "No description.",
+                        "filename": note_file.name,
+                        "path":     file_path,
+                        "uploader": t["name"],
+                        "date":     datetime.now().strftime("%d %b %Y"),
+                    })
+                    st.success(f"✅ '{note_title}' uploaded! It now appears in the Notes section.")
+
+            if "uploaded_notes" in st.session_state and st.session_state.uploaded_notes:
+                my_uploads = [n for n in st.session_state.uploaded_notes if n["uploader"] == t["name"]]
+                if my_uploads:
+                    sec("Your Uploaded Notes")
+                    for n in my_uploads:
+                        ext = n["filename"].rsplit(".", 1)[-1].upper()
+                        ext_color = {"PDF":"#ef4444","DOCX":"#3b82f6","PNG":"#22c55e","JPG":"#f59e0b","JPEG":"#f59e0b"}.get(ext,"#888")
+                        G(f"""
+                        <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-left:3px solid #22c55e;
+                                    border-radius:10px;padding:0.9rem 1.1rem;margin-bottom:0.6rem;
+                                    display:flex;align-items:center;gap:14px;">
+                            <div style="width:42px;height:42px;border-radius:8px;background:{ext_color}20;
+                                        border:1px solid {ext_color}40;display:flex;align-items:center;
+                                        justify-content:center;font-size:0.65rem;font-weight:700;
+                                        color:{ext_color};flex-shrink:0;">{ext}</div>
+                            <div style="flex:1;">
+                                <div style="font-weight:600;font-size:0.9rem;color:#e8e8e8;">{n['title']}</div>
+                                <div style="font-size:0.76rem;color:#555;margin-top:2px;">{n['subject']} · {n['date']} · {n['filename']}</div>
+                                <div style="font-size:0.78rem;color:#777;margin-top:2px;">{n['desc']}</div>
+                            </div>
+                        </div>
+                        """)
+                        with open(n["path"], "rb") as fh:
+                            st.download_button(
+                                f"⬇ Download {n['filename']}",
+                                data=fh.read(),
+                                file_name=n["filename"],
+                                key=f"up_dl_{n['filename']}_{n['date']}"
+                            )
         else:
             header("TEACHER LOGIN", "Sign in to access your panel")
             G("""
@@ -547,30 +601,47 @@ with content:
             if subj_f == "My Subjects": notes = [n for n in notes if n[1] in t.get("subjects", [])]
             elif subj_f != "All":       notes = [n for n in notes if n[1] == subj_f]
 
+            # Merge uploaded notes into the list
+            if "uploaded_notes" in st.session_state:
+                for un in st.session_state.uploaded_notes:
+                    if subj_f == "All" or (subj_f == "My Subjects" and un["subject"] in t.get("subjects",[])) or subj_f == un["subject"]:
+                        if not search or search.lower() in un["title"].lower():
+                            notes = list(notes) + [(un["title"], un["subject"], un["desc"], "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&q=80", un)]
+
             if not notes:
                 st.info("No notes found.")
             else:
                 cols = st.columns(3)
-                for i, (title, subj, desc, img) in enumerate(notes):
+                for i, entry in enumerate(notes):
+                    title, subj, desc, img = entry[0], entry[1], entry[2], entry[3]
+                    uploaded_meta = entry[4] if len(entry) > 4 else None
+                    c    = SUBJ_COLOR.get(subj, "#22c55e")
+                    mine = subj in t.get("subjects", [])
                     c    = SUBJ_COLOR.get(subj, "#22c55e")
                     mine = subj in t.get("subjects", [])
                     with cols[i % 3]:
+                        is_uploaded = uploaded_meta is not None
+                        badge = '<span style="font-size:0.68rem;color:#f59e0b;font-weight:600;">⬆ Uploaded</span>' if is_uploaded else ('<span style="font-size:0.68rem;color:#22c55e;font-weight:600;">✓ Yours</span>' if mine else '')
                         G(f"""
                         <div style="background:#1a1a1a;border:1px solid #2a2a2a;
                                     border-top:2px solid {c if mine else '#2a2a2a'};
-                                    border-radius:12px;overflow:hidden;margin-bottom:0.8rem;opacity:{'1' if mine else '0.4'};">
+                                    border-radius:12px;overflow:hidden;margin-bottom:0.8rem;opacity:{'1' if (mine or is_uploaded) else '0.4'};">
                             <img src="{img}" style="width:100%;height:100px;object-fit:cover;display:block;filter:brightness(0.5);">
                             <div style="padding:0.9rem 1rem;">
                                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
                                     <span style="background:{c}20;color:{c};font-size:0.68rem;font-weight:600;
                                                  padding:2px 8px;border-radius:20px;border:1px solid {c}40;">{subj}</span>
-                                    {'<span style="font-size:0.68rem;color:#22c55e;font-weight:600;">✓ Yours</span>' if mine else ''}
+                                    {badge}
                                 </div>
                                 <div style="font-size:0.92rem;font-weight:600;color:#e8e8e8;margin-bottom:3px;">{title}</div>
                                 <div style="font-size:0.78rem;color:#666;margin-bottom:6px;">{desc}</div>
                             </div>
                         </div>""")
-                        if mine:
+                        if is_uploaded:
+                            with open(uploaded_meta["path"], "rb") as fh:
+                                st.download_button("⬇ Download", data=fh.read(),
+                                    file_name=uploaded_meta["filename"], key=f"ndl_{i}")
+                        elif mine:
                             st.download_button("⬇ Download", data=f"# {title}\n{desc}",
                                 file_name=f"{title.replace(' ','_')}.txt", key=f"dl_{i}")
 
