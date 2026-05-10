@@ -464,11 +464,13 @@ with content:
                 password = st.text_input("Password", type="password", placeholder="Enter password")
                 pad(4)
                 if st.button("Sign In →", use_container_width=True):
-                    if username in TEACHERS and TEACHERS[username]["password"] == password:
-                        st.session_state.teacher = TEACHERS[username]
+                    u = username.strip()
+                    p = password.strip()
+                    if u in TEACHERS and TEACHERS[u]["password"] == p:
+                        st.session_state.teacher = TEACHERS[u]
                         st.rerun()
                     else:
-                        st.error("Invalid credentials.")
+                        st.error(f"❌ Invalid credentials. Try: teacher1 / teach123  or  teacher2 / teach456")
                 with st.expander("Demo credentials"):
                     st.markdown("| Username | Password |\n|---|---|\n| `teacher1` | `teach123` |\n| `teacher2` | `teach456` |")
 
