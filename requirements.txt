@@ -8,3 +8,11 @@ scikit-learn==1.5.1
 streamlit>=1.32.0
 pandas>=2.0.0
 plotly>=5.18.0
+# Before (fails on cloud - read-only filesystem)
+DB_PATH   = "fitmat.db"
+NOTES_DIR = "uploaded_notes"
+
+# After (uses /tmp which is writable on cloud)
+BASE_DIR  = tempfile.gettempdir()   # → /tmp
+DB_PATH   = os.path.join(BASE_DIR, "fitmat.db")
+NOTES_DIR = os.path.join(BASE_DIR, "uploaded_notes")
